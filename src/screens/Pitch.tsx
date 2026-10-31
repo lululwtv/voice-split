@@ -59,17 +59,24 @@ function Room() {
   );
 }
 
-function SharedMic() {
-  const bars = Array.from({ length: 30 }, (_, i) => 8 + 42 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.43)));
+function Laptops() {
+  const bars = Array.from({ length: 26 }, (_, i) => 8 + 42 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.43)));
+  const ownBars = Array.from({ length: 13 }, (_, i) => 8 + 30 * Math.abs(Math.cos(i * 0.9) * Math.sin(i * 0.6)));
   return (
     <div className="scene-art merge">
-      <svg viewBox="0 0 560 300" role="img" aria-label="Four colored voices enter one laptop and come out as one grey signal.">
-        <rect x="200" y="40" width="160" height="104" rx="8" className="art-solid" />
-        <path d="M172 152 H388" className="art-stroke" />
-        <text x="280" y="98" textAnchor="middle" className="art-text">1 mic</text>
-        <rect data-thread="laptop" x="200" y="40" width="160" height="112" fill="none" />
+      <svg viewBox="0 0 560 300" role="img" aria-label="Three voices enter one shared laptop and come out as one grey signal. Youngjin's voice enters a separate laptop and stays its own green line.">
+        <rect x="110" y="40" width="160" height="104" rx="8" className="art-solid" />
+        <path d="M82 152 H298" className="art-stroke" />
+        <text x="190" y="98" textAnchor="middle" className="art-text">Shared mic</text>
+        <rect data-thread="laptop" x="110" y="40" width="160" height="112" fill="none" />
         {bars.map((h, i) => (
-          <rect key={i} x={165 + i * 8} y={235 - h / 2} width="4" height={h} rx="2" className="art-bar" />
+          <rect key={i} x={87 + i * 8} y={235 - h / 2} width="4" height={h} rx="2" className="art-bar" />
+        ))}
+        <rect x="430" y="62" width="108" height="82" rx="8" className="art-solid" />
+        <path d="M412 152 H556" className="art-stroke" />
+        <text x="484" y="108" textAnchor="middle" className="art-text">Own mic</text>
+        {ownBars.map((h, i) => (
+          <rect key={i} x={434 + i * 8} y={235 - h / 2} width="4" height={h} rx="2" fill={YOUNGJIN} />
         ))}
       </svg>
     </div>
@@ -125,8 +132,8 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
         <Room />
       </section>
       <section className="scene">
-        <p className="caption">Every voice lands on one laptop. One line comes out.</p>
-        <SharedMic />
+        <p className="caption">Three voices share one laptop. One has its own.</p>
+        <Laptops />
       </section>
       <section className="scene">
         <p className="caption">Your notetaker hears one speaker in the room. Who owns the action item?</p>

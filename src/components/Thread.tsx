@@ -1,5 +1,5 @@
 import { useEffect, useRef, type RefObject } from "react";
-import { HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit";
+import { HERO_LANE_START, HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit";
 
 const GUTTER = 56;
 const CORNER = 16;
@@ -11,7 +11,13 @@ const SAMPLE_EVERY = 16;
 /** The line is drawn up to this share of the viewport height. */
 const DRAW_HEAD = 0.72;
 const OFFSETS = [18, 6, -6, -18];
-const COLORS = ["var(--speaker-1)", "var(--speaker-2)", "var(--speaker-3)", "var(--speaker-4)"];
+const OWN_LINE_INSET = 14;
+const OWN_LINE_DROP = 24;
+const SPEAKERS = ["var(--speaker-1)", "var(--speaker-2)", "var(--speaker-3)", "var(--speaker-4)"];
+const YOUNGJIN = SPEAKERS[3];
+const GREY = "var(--unknown)";
+// Drawn lines in order: three voices into the shared laptop, Youngjin's own line, the shared grey line, four tracks.
+const LINE_COLORS = [SPEAKERS[0], SPEAKERS[1], SPEAKERS[2], YOUNGJIN, GREY, YOUNGJIN, SPEAKERS[0], SPEAKERS[1], SPEAKERS[2]];
 
 interface Run {
   length: number;
@@ -30,7 +36,7 @@ function buildPaths(root: HTMLElement) {
   const hero = root.querySelector('[data-thread="hero"]');
   const end = root.querySelector('[data-thread="end"]');
   const sections = [...root.querySelectorAll('[data-thread="section"]')];
-  if (!laptop || voices.length !== COLORS.length || !story || !hero || !end || !sections.length) return null;
+  if (!laptop || voices.length !== SPEAKERS.length || !story || !hero || !end || !sections.length) return null;
 
   const wide = box.width >= WIDE_ENOUGH;
   const heroBox = rel(hero);
@@ -39,13 +45,14 @@ function buildPaths(root: HTMLElement) {
   const left = wide ? heroBox.left - GUTTER : NARROW_RAIL;
   const right = wide ? heroBox.right + GUTTER : NARROW_RAIL;
 
-  // Each person's voice runs from where they sit into the one laptop.
+  // Each voice in the room runs from where they sit into the one shared laptop.
   const mic = rel(laptop);
   const startX = (mic.left + mic.right) / 2;
-  const inputs = voices.map((voice, i) => {
+  const roomVoices = voices.slice(0, -1);
+  const inputs = roomVoices.map((voice, i) => {
     const v = rel(voice);
     const x = (v.left + v.right) / 2;
-    const landing = startX + (i - (voices.length - 1) / 2) * INPUT_SPREAD;
+    const landing = startX + (i - (roomVoices.length - 1) / 2) * INPUT_SPREAD;
     const bend = mic.top - BEND;
     return `M${x} ${v.bottom} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
   });
@@ -56,10 +63,30 @@ function buildPaths(root: HTMLElement) {
   const heroMid = heroY(HERO_MID);
   const grey = [
     `M${startX} ${mic.bottom}`,
-    `L${startX} ${gapY - 70}`,
-    `C${startX} ${gapY} ${left} ${gapY} ${left} ${gapY + 70}`,
-    `L${left} ${heroMid - 60}`,
-    `C${left} ${heroMid} ${left} ${heroMid} ${heroBox.left} ${heroMid}`,
+    `L${startX} ${gapY - CORNER}`,
+    `Q${startX} ${gapY} ${startX - CORNER} ${gapY}`,
+    `L${left + CORNER} ${gapY}`,
+    `Q${left} ${gapY} ${left} ${gapY + CORNER}`,
+    `L${left} ${heroMid - CORNER}`,
+    `Q${left} ${heroMid} ${left + CORNER} ${heroMid}`,
+    `L${heroBox.left} ${heroMid}`,
+  ].join(" ");
+
+  // Youngjin's line never mixes: it runs from their own laptop, just inside the grey line, to their track.
+  const own = rel(voices[voices.length - 1]);
+  const ownX = (own.left + own.right) / 2;
+  const ownTurn = gapY + OWN_LINE_DROP;
+  const ownRail = left + OWN_LINE_INSET;
+  const ownLane = heroY(LANE_YS[0]);
+  const ownLine = [
+    `M${ownX} ${own.bottom}`,
+    `L${ownX} ${ownTurn - CORNER}`,
+    `Q${ownX} ${ownTurn} ${ownX - CORNER} ${ownTurn}`,
+    `L${ownRail + CORNER} ${ownTurn}`,
+    `Q${ownRail} ${ownTurn} ${ownRail} ${ownTurn + CORNER}`,
+    `L${ownRail} ${ownLane - CORNER}`,
+    `Q${ownRail} ${ownLane} ${ownRail + CORNER} ${ownLane}`,
+    `L${heroBox.left + HERO_LANE_START * scale} ${ownLane}`,
   ].join(" ");
 
   // Four voices: out of the hero tracks, weaving down each side of the evidence, ending at the repo button.
@@ -95,7 +122,7 @@ function buildPaths(root: HTMLElement) {
     return d.join(" ");
   });
 
-  return { inputs, grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
+  return { inputs, ownLine, grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
 }
 
 function measure(path: SVGPathElement): Run {
@@ -124,8 +151,8 @@ function drawnLength(run: Run, head: number) {
 }
 
 /**
- * The line that carries the pitch: four voices enter one laptop, become one grey line,
- * split back into four at the hero, then run through every section. A faint copy is always visible; scrolling draws the bright one.
+ * The lines that carry the pitch: three voices enter a shared laptop and become one grey line,
+ * a fourth keeps its own laptop and line, the hero separates them, then all four run through every section. A faint copy is always visible; scrolling draws the bright one.
  */
 export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
   const svg = useRef<SVGSVGElement>(null);
@@ -157,7 +184,7 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
       const built = buildPaths(host);
       if (!built) return;
       canvas.setAttribute("height", String(built.height));
-      const all = [...built.inputs, built.grey, ...built.strands];
+      const all = [...built.inputs, built.ownLine, built.grey, ...built.strands];
       runs = all.map((d, i) => {
         const group = canvas.children[i] as SVGGElement;
         const [track, bright] = [group.children[0], group.children[1]] as SVGPathElement[];
@@ -189,7 +216,7 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
 
   return (
     <svg ref={svg} className="thread" aria-hidden width="100%">
-      {[...COLORS, "var(--unknown)", ...COLORS].map((color, i) => (
+      {LINE_COLORS.map((color, i) => (
         <g key={i}>
           <path className="thread-track" stroke={color} />
           <path className="thread-bright" stroke={color} />
