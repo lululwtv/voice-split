@@ -13,6 +13,8 @@ class CoreRoomStore(RoomStore):
         super().__init__(directory)
         with self.connection() as db:
             db.execute("BEGIN IMMEDIATE")
+            db.execute("""CREATE TABLE IF NOT EXISTS room_summaries (
+                room_id TEXT PRIMARY KEY, fingerprint TEXT NOT NULL, payload TEXT NOT NULL)""")
             db.execute("""CREATE TABLE IF NOT EXISTS room_voice_names (
                 room_id TEXT NOT NULL, unknown_id TEXT NOT NULL, name TEXT NOT NULL,
                 PRIMARY KEY (room_id, unknown_id))""")
@@ -28,6 +30,28 @@ class CoreRoomStore(RoomStore):
     def _require_room(db, room_id):
         if db.execute("SELECT 1 FROM rooms WHERE id=?", (room_id,)).fetchone() is None:
             raise KeyError(room_id)
+
+    def summary(self, room_id, segments):
+        from .summaries import fingerprint
+        with self.connection() as db:
+            row = db.execute("SELECT fingerprint,payload FROM room_summaries WHERE room_id=?",
+                             (room_id,)).fetchone()
+        if not row:
+            return {}
+        return {"summary": json.loads(row[1]), "relabelledSinceSummary": row[0] != fingerprint(segments)}
+
+    def save_summary(self, room_id, segments, summary):
+        from .summaries import fingerprint
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._require_room(db, room_id)
+            current = [self._normalize(json.loads(row[0])) for row in db.execute(
+                "SELECT payload FROM segments WHERE room_id=? ORDER BY rowid", (room_id,))]
+            if fingerprint(current) != fingerprint(segments):
+                raise ConflictError("Transcript changed while summarizing. Generate again.")
+            db.execute("INSERT INTO room_summaries VALUES (?,?,?) ON CONFLICT(room_id) DO UPDATE "
+                       "SET fingerprint=excluded.fingerprint,payload=excluded.payload",
+                       (room_id, fingerprint(segments), json.dumps(summary)))
 
     @staticmethod
     def _roster(db, room_id):

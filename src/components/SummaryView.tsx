@@ -51,7 +51,7 @@ export function SummaryView({ meeting, onJump }: { meeting: Meeting; onJump: (se
   return (
     <div className="summary">
       {meeting.relabelledSinceSummary && (
-        <p className="notice"><WarningCircleIcon /> Speaker changed. Names here may be out of date.</p>
+        <p className="notice"><WarningCircleIcon /> Transcript changed. Regenerate this summary to update it.</p>
       )}
       <div className="summary-top">
         <p className="overview">{summary.overview}</p>

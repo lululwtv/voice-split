@@ -5,9 +5,9 @@ import { TranscriptTurn } from "../components/TranscriptTurn";
 import { groupTranscriptTurns } from "../lib/transcriptTurns";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
-import { correctSpeaker, loadMeeting, mergeSegment, roomPath } from "../lib/api";
+import { correctSpeaker, loadMeeting, mergeSegment, request, roomPath } from "../lib/api";
 import { formatTime, labelAccuracy, speakerNotes, talkTime } from "../lib/stats";
-import type { Meeting } from "../types";
+import type { Meeting, Summary } from "../types";
 
 function SplitTimeline(props: { meeting: Meeting; time: number; onSeek: (t: number) => void }) {
   const { people, windows, duration } = props.meeting;
@@ -59,14 +59,36 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
   const [playing, setPlaying] = useState(false);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
-  const scope = useRef({ roomId: meeting.roomId, active: true });
-  if (scope.current.roomId !== meeting.roomId) scope.current = { roomId: meeting.roomId, active: true };
+  const [summarizing, setSummarizing] = useState(false);
+  const [summaryError, setSummaryError] = useState("");
+  const scope = useRef({ roomId: meeting.roomId, active: true, meeting });
+  if (scope.current.roomId !== meeting.roomId) scope.current = { roomId: meeting.roomId, active: true, meeting };
+  scope.current.meeting = meeting;
   useEffect(() => {
     scope.current.active = true;
     return () => { scope.current.active = false; };
   }, []);
   const { people, segments, windows, duration } = meeting;
   const turns = groupTranscriptTurns(segments);
+
+  const summarize = async () => {
+    if (!meeting.roomId || summarizing) return;
+    const owner = scope.current;
+    setSummarizing(true); setSummaryError("");
+    try {
+      const result = await request<{ summary: Summary }>(`${roomPath(meeting.roomId)}/summary`, { method: "POST" });
+      if (scope.current === owner && owner.active) onChange({ ...owner.meeting, summary: result.summary,
+        relabelledSinceSummary: owner.meeting.segments !== meeting.segments });
+    } catch (error) {
+      if (scope.current === owner && owner.active) setSummaryError((error as Error).message);
+    } finally {
+      if (scope.current === owner && owner.active) setSummarizing(false);
+    }
+  };
+  useEffect(() => {
+    setSummarizing(false); setSummaryError("");
+    if (meeting.roomId && segments.length && !meeting.summary) void summarize();
+  }, [meeting.roomId]);
 
   useEffect(() => {
     if (!playing) return;
@@ -117,7 +139,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
       const saved = await correctSpeaker(meeting.roomId, segment, personId);
       if (!isCurrent()) return;
       const next = mergeSegment(segments, saved);
-      onChange({ ...meeting, segments: next, windows: next.flatMap((s) => s.personId ? [{ start: s.start, end: s.end, personId: s.personId }] : []) });
+      onChange({ ...meeting, segments: next, relabelledSinceSummary: !!meeting.summary, windows: next.flatMap((s) => s.personId ? [{ start: s.start, end: s.end, personId: s.personId }] : []) });
     } catch (error) {
       if (!isCurrent()) return;
       setError((error as Error).message);
@@ -184,13 +206,23 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             <button role="tab" aria-selected={tab === "notes"} onClick={() => setTab("notes")}>Notes by speaker</button>
           </div>
           {tab === "summary" ? (
-            <SummaryView meeting={meeting} onJump={showLine} />
+            <>
+              {meeting.roomId && <div className="summary-top">
+                <p className="muted">AI summaries send transcript text to Anthropic (Haiku 5.5).</p>
+                <button className="btn" disabled={summarizing} onClick={() => void summarize()}>
+                  {summarizing ? "Summarizing…" : meeting.summary ? "Regenerate summary" : "Generate summary"}
+                </button>
+              </div>}
+              {summaryError && <p className="error" role="alert">{summaryError}</p>}
+              {summarizing && <p role="status">Writing your summary… Transcript saved.</p>}
+              {(!summarizing || meeting.summary) && <SummaryView meeting={meeting} onJump={showLine} />}
+            </>
           ) : tab === "transcript" ? (
             <ol className="transcript">
               {turns.map((turn) => <TranscriptTurn key={turn.id} turn={turn} people={people} roomId={meeting.roomId} saving={saving}
                 current={turn.segments.some((segment) => segment.start <= time && time < segment.end)}
                 onSeek={(start) => { setTime(start); setPlaying(false); }} onRelabel={(segment, id) => relabel(segment.id, id)}
-                onSaved={(rows) => onChange({ ...meeting, segments: rows.reduce(mergeSegment, segments) })} />)}
+                onSaved={(rows) => onChange({ ...meeting, segments: rows.reduce(mergeSegment, segments), relabelledSinceSummary: !!meeting.summary })} />)}
             </ol>
           ) : (
             <div className="notes">

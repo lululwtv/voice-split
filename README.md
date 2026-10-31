@@ -4,7 +4,7 @@ Know who said what, even when a whole room shares one mic. Timbre runs beside Go
 
 ## Status
 
-The Timbre frontend connects to the local voice-split backend for saved voices, meeting rooms, transcription, speaker corrections and exports. Speaker labels are estimates and can be corrected. Automatic summaries and direct Google Meet integration are not implemented.
+The Timbre frontend connects to the local voice-split backend for saved voices, meeting rooms, transcription, speaker corrections, AI summaries and exports. Speaker labels are estimates and can be corrected. Direct Google Meet integration is not implemented.
 
 ## Run it
 
@@ -29,6 +29,6 @@ Timbre is available under the [MIT license](LICENSE).
 
 ## Local data
 
-Saved voices and transcripts live in `~/.local/share/voice-split`, independently of this repository. Set `VOICE_SPLIT_DATA_DIR` to use a separate test workspace. Raw enrollment recordings are not retained. No paid API key is required. The server accepts localhost connections only.
+Saved voices and transcripts live in `~/.local/share/voice-split`, independently of this repository. Set `VOICE_SPLIT_DATA_DIR` to use a separate test workspace. Raw enrollment recordings are not retained. Transcription runs locally without a paid API key. AI summaries use Anthropic Haiku 5.5 and send transcript text to Anthropic; set `ANTHROPIC_API_KEY` in the server environment or a local, ignored `.env` file. Summaries are generated when review opens, saved with the meeting, and can be regenerated from the Summary tab. The server accepts localhost connections only.
 
 Speaker matching requires credible evidence, not just the closest voice. Numbered unknown voices persist within each meeting; ambiguous matches stay unassigned. Configure `VOICE_SPLIT_OPEN_THRESHOLD` (0.55), `VOICE_SPLIT_OPEN_MARGIN` (0.08), and `VOICE_SPLIT_UNKNOWN_THRESHOLD` (0.65) before startup. Clips under 0.5 seconds require 0.05 more named-match similarity. Existing unknown references compete with borderline named matches; strong named matches (0.80+) may resolve a previously unknown voice. Confidence labels are heuristic, not accuracy percentages. Short clips can still fragment one unknown speaker into several identities; thresholds need evaluation on separate labeled meeting recordings. Corrections retain original evidence but do not automatically train profiles or adjust thresholds.

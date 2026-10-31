@@ -1,4 +1,4 @@
-import type { Meeting, Person, Segment } from "../types";
+import type { Meeting, Person, Segment, Summary } from "../types";
 
 interface Identification {
   confidence?: string;
@@ -85,7 +85,7 @@ export async function correctSpeaker(roomId: string, segment: Segment, personId:
 }
 
 export async function loadMeeting(room: { id: string; title: string }, people: Person[]): Promise<Meeting> {
-  const result = await request<{ segments: RawSegment[] }>(`${roomPath(room.id)}/segments`);
+  const result = await request<{ segments: RawSegment[]; summary?: Summary; relabelledSinceSummary?: boolean }>(`${roomPath(room.id)}/segments`);
   const segments = result.segments.map(toSegment);
   return {
     roomId: room.id, title: room.title, isSample: false, people, segments,
@@ -93,6 +93,7 @@ export async function loadMeeting(room: { id: string; title: string }, people: P
       { start: segment.start, end: segment.end, personId: segment.personId },
     ]),
     duration: segments.reduce((end, segment) => Math.max(end, segment.end), 0),
-    summary: null,
+    summary: result.summary ?? null,
+    relabelledSinceSummary: result.relabelledSinceSummary,
   };
 }

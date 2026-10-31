@@ -50,6 +50,33 @@ def test_name_unknown_api(core_client):
     assert "Jamie" in client.get(base + "/export?format=text").text
 
 
+def test_summary_persistence_export_staleness_and_failures(core_client, monkeypatch):
+    client, server, room, _, _, _ = core_client
+    base = f"/api/v2/rooms/{room}"
+    summary = {"overview": "Launch discussed.", "actions": [], "decisions": [], "questions": []}
+    server.core_meetings.append(room, {"id": "line", "start": 0, "end": 1, "text": "Launch Friday"})
+    monkeypatch.setattr(server, "generate_summary", lambda *args: summary)
+    assert client.post(base + "/summary").json() == {"summary": summary, "relabelledSinceSummary": False}
+    from voice_split.core_rooms import CoreRoomStore
+    reopened = CoreRoomStore(server.DATA)
+    assert reopened.summary(room, reopened.history(room))["summary"] == summary
+    assert client.get(base + "/segments").json()["summary"] == summary
+    assert client.get(base + "/export").json()["summary"] == summary
+    server.core_meetings.update_automatic(room, "line", {"speaker": "Changed"}, 0)
+    assert client.get(base + "/segments").json()["relabelledSinceSummary"] is True
+    def fail(*args):
+        raise RuntimeError("Anthropic unavailable")
+    monkeypatch.setattr(server, "generate_summary", fail)
+    assert client.post(base + "/summary").status_code == 503
+    assert client.get(base + "/segments").json()["summary"] == summary
+    def changed(*args):
+        server.core_meetings.update_automatic(room, "line", {"text": "New text"}, 1)
+        return summary
+    monkeypatch.setattr(server, "generate_summary", changed)
+    assert client.post(base + "/summary").status_code == 409
+    assert client.post("/api/v2/rooms/missing/summary").status_code == 404
+
+
 def test_short_match_correction_reload_export_and_conflicts(core_client, monkeypatch):
     client, server, room, first, second, audio = core_client
     monkeypatch.setattr(server.engines, "embed", lambda audio: np.array([.8, .6]))

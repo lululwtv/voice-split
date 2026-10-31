@@ -29,6 +29,13 @@ describe("speaker segment mapping", () => {
 });
 
 describe("local meeting API", () => {
+  it("restores a saved summary and its stale state", async () => {
+    const summary = { overview: "Planning", actions: [], decisions: [], questions: [] };
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(new Response(JSON.stringify({
+      segments: [raw()], summary, relabelledSinceSummary: true,
+    }))));
+    expect(await loadMeeting({ id: "room", title: "Planning" }, [])).toMatchObject({ summary, relabelledSinceSummary: true });
+  });
   it("sends the correction revision and a unique idempotency key", async () => {
     const fetcher = vi.fn().mockImplementation(async () => new Response(JSON.stringify(raw({
       profile_id: "bob", revision: 5, assignment_source: "manual",

@@ -24,6 +24,7 @@ from .core_rooms import CoreRoomStore, ConflictError
 from .open_matching import MeetingMatcher
 from .meeting_stream import MeetingStream
 from .transcript import transcript_turns
+from .summaries import generate_summary
 
 VERSION = "0.3.0"
 ROOT = Path(__file__).resolve().parent.parent
@@ -277,7 +278,24 @@ async def set_participants(room_id: str, body: RosterUpdate):
 @app.get("/api/v2/rooms/{room_id}/segments")
 def get_segments(room_id: str):
     require_room(room_id)
-    return {"segments": core_meetings.history(room_id)}
+    segments = core_meetings.history(room_id)
+    return {"segments": segments, **core_meetings.summary(room_id, segments)}
+
+
+@app.post("/api/v2/rooms/{room_id}/summary")
+async def summarize_meeting(room_id: str):
+    room = require_room(room_id)
+    segments = core_meetings.history(room_id)
+    try:
+        summary = await asyncio.to_thread(generate_summary, room["title"], segments)
+        core_meetings.save_summary(room_id, segments, summary)
+    except ConflictError as error:
+        raise HTTPException(409, str(error)) from error
+    except ValueError as error:
+        raise HTTPException(422, str(error)) from error
+    except RuntimeError as error:
+        raise HTTPException(503, str(error)) from error
+    return {"summary": summary, "relabelledSinceSummary": False}
 
 
 @app.patch("/api/v2/rooms/{room_id}/segments/{segment_id}/speaker")
@@ -312,7 +330,7 @@ def export_meeting(room_id: str, format: str = "json"):
     room = require_room(room_id)
     segments = core_meetings.history(room_id)
     if format == "json":
-        return {"room": room, "segments": segments}
+        return {"room": room, "segments": segments, **core_meetings.summary(room_id, segments)}
     if format == "text":
         def timestamp(seconds):
             value = max(0, int(seconds))
