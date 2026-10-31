@@ -4,8 +4,8 @@ import { HERO_LANE_START, HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit
 const GUTTER = 56;
 const CORNER = 16;
 const BEND = 90;
-/** The person icon has empty space under its shoulders, so the line starts inside the box. */
-const FIGURE_FOOT = 9;
+/** The person icon has empty space under its shoulders, so each line starts inside the box. */
+const FIGURE_FOOT_SHARE = 0.17;
 const INPUT_SPREAD = 14;
 const NARROW_RAIL = 14;
 const WIDE_ENOUGH = 1000;
@@ -32,6 +32,8 @@ function buildPaths(root: HTMLElement) {
     const r = el.getBoundingClientRect();
     return { left: r.left - box.left, right: r.right - box.left, top: r.top - box.top, bottom: r.bottom - box.top };
   };
+  const foot = (box: { top: number; bottom: number }) => box.bottom - (box.bottom - box.top) * FIGURE_FOOT_SHARE;
+  const call = root.querySelector('[data-thread="call"]');
   const laptop = root.querySelector('[data-thread="laptop"]');
   const ownLaptop = root.querySelector('[data-thread="own-laptop"]');
   const voices = [...root.querySelectorAll('[data-thread="voice"]')];
@@ -39,7 +41,7 @@ function buildPaths(root: HTMLElement) {
   const hero = root.querySelector('[data-thread="hero"]');
   const end = root.querySelector('[data-thread="end"]');
   const sections = [...root.querySelectorAll('[data-thread="section"]')];
-  if (!laptop || !ownLaptop || voices.length !== SPEAKERS.length || !story || !hero || !end || !sections.length) return null;
+  if (!call || !laptop || !ownLaptop || voices.length !== SPEAKERS.length || !story || !hero || !end || !sections.length) return null;
 
   const wide = box.width >= WIDE_ENOUGH;
   const heroBox = rel(hero);
@@ -57,7 +59,7 @@ function buildPaths(root: HTMLElement) {
     const x = (v.left + v.right) / 2;
     const landing = startX + (i - (roomVoices.length - 1) / 2) * INPUT_SPREAD;
     const bend = mic.top - BEND;
-    return `M${x} ${v.bottom - FIGURE_FOOT} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
+    return `M${x} ${foot(v)} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
   });
 
   // One grey line: out of the laptop, down through the story, into the mixed signal.
@@ -84,7 +86,7 @@ function buildPaths(root: HTMLElement) {
   const ownRail = left + OWN_LINE_INSET;
   const ownLane = heroY(LANE_YS[0]);
   const ownLine = [
-    `M${ownX} ${own.bottom - FIGURE_FOOT}`,
+    `M${ownX} ${foot(own)}`,
     `L${ownX} ${ownMic.top - BEND}`,
     `C${ownX} ${ownMic.top - BEND / 3} ${ownMicX} ${ownMic.top - BEND} ${ownMicX} ${ownMic.top}`,
     `L${ownMicX} ${ownTurn - CORNER}`,
@@ -129,7 +131,7 @@ function buildPaths(root: HTMLElement) {
     return d.join(" ");
   });
 
-  return { inputs, ownLine, grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
+  return { callBottom: rel(call).bottom, inputs, ownLine, grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
 }
 
 function measure(path: SVGPathElement): Run {
@@ -191,9 +193,15 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
       const built = buildPaths(host);
       if (!built) return;
       canvas.setAttribute("height", String(built.height));
+      // Voices start brighter inside the dark call window, then match the page once they leave it.
+      canvas.querySelectorAll("linearGradient").forEach((gradient) => {
+        gradient.setAttribute("y1", String(built.callBottom - 1));
+        gradient.setAttribute("y2", String(built.callBottom + 1));
+      });
       const all = [...built.inputs, built.ownLine, built.grey, ...built.strands];
+      const groups = canvas.querySelectorAll<SVGGElement>(":scope > g");
       runs = all.map((d, i) => {
-        const group = canvas.children[i] as SVGGElement;
+        const group = groups[i];
         const [track, bright] = [group.children[0], group.children[1]] as SVGPathElement[];
         track.setAttribute("d", d);
         bright.setAttribute("d", d);
@@ -223,13 +231,24 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
 
   return (
     <svg ref={svg} className="thread" aria-hidden width="100%">
-      {LINE_COLORS.map((color, i) => (
-        <g key={i}>
-          <path className="thread-track" stroke={color} />
-          <path className="thread-bright" stroke={color} />
-          <circle className="thread-head" r="5" fill={color} />
-        </g>
-      ))}
+      {LINE_COLORS.map((color, i) => {
+        const stroke = i < SPEAKERS.length ? `url(#voice-${i})` : color;
+        return (
+          <g key={i}>
+            <path className="thread-track" stroke={stroke} />
+            <path className="thread-bright" stroke={stroke} />
+            <circle className="thread-head" r="5" fill={color} />
+          </g>
+        );
+      })}
+      <defs>
+        {SPEAKERS.map((color, i) => (
+          <linearGradient key={i} id={`voice-${i}`} gradientUnits="userSpaceOnUse" x1="0" x2="0">
+            <stop offset="0" stopColor={`var(--call-speaker-${i + 1})`} />
+            <stop offset="1" stopColor={color} />
+          </linearGradient>
+        ))}
+      </defs>
     </svg>
   );
 }

@@ -16,6 +16,10 @@
   --speaker-6: #b52a6e;
   --error: #b3261e;
   --who: var(--ink);
+  --call-speaker-1: #ff6647;
+  --call-speaker-2: #5b9bff;
+  --call-speaker-3: #bd96ff;
+  --call-speaker-4: #35dba6;
   --display: "Bricolage Grotesque Variable", system-ui, sans-serif;
   --mono: "JetBrains Mono Variable", ui-monospace, monospace;
   font-family: "Figtree Variable", system-ui, sans-serif;
@@ -290,12 +294,16 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 
 /* Pitch page: the thread runs behind everything in the gutters */
 .pitch { position: relative; overflow: hidden; padding-bottom: 24px; }
-.thread { position: absolute; top: 0; left: 0; pointer-events: none; }
+.thread { position: absolute; top: 0; left: 0; z-index: 1; pointer-events: none; }
 .thread path { fill: none; stroke-linecap: round; }
 .thread-track { stroke-width: 1.5; opacity: .22; }
 .thread-bright { stroke-width: 2.5; }
 .thread-head { transition: opacity 160ms; }
-.pitch > section, .pitch > footer { position: relative; width: min(1000px, calc(100% - 224px)); margin-inline: auto; }
+.pitch > section, .pitch > footer { position: relative; z-index: 2; width: min(1000px, calc(100% - 224px)); margin-inline: auto; }
+/* The voices start at each person, so the call sits under the lines. Its labels and buttons stay on top. */
+.pitch > .scene-call { z-index: auto; }
+.tile-name, .call-tools span, .call .bubble { z-index: 3; }
+.call-tools span { position: relative; }
 .scene { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; min-height: 72vh; padding-block: 48px; }
 .caption { font-family: var(--display); font-size: clamp(1.75rem, 3.2vw, 2.75rem); font-weight: 500; line-height: 1.08; letter-spacing: -.028em; text-wrap: balance; }
 .stat-line { grid-column: 1 / -1; }
@@ -319,7 +327,7 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .call {
   /* The call window stays dark in both themes, like the apps it stands for. */
   --surface: #131318; --ink: #f4f2ec; --muted: #a0a0a8; --line: #2a2a32;
-  --speaker-1: #ff6647; --speaker-2: #5b9bff; --speaker-3: #bd96ff; --speaker-4: #35dba6;
+  --speaker-1: var(--call-speaker-1); --speaker-2: var(--call-speaker-2); --speaker-3: var(--call-speaker-3); --speaker-4: var(--call-speaker-4);
   position: relative; display: grid; gap: 10px; padding: 12px; background: #0d0d11; color: var(--ink); border-radius: 16px; box-shadow: 0 24px 60px -30px rgb(0 0 0 / 60%);
 }
 .call-bar { display: flex; align-items: center; gap: 14px; padding: 2px 6px; font-size: .85rem; }

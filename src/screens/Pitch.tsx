@@ -42,7 +42,7 @@ function Person({ color, className }: { color: string; className: string }) {
 
 function VideoCall() {
   return (
-    <div className="call" role="group" aria-label="A video call with two tiles. Edric, Dowon and Wei Ming share the meeting room laptop's tile. Youngjin has a separate tile.">
+    <div className="call" data-thread="call" role="group" aria-label="A video call with two tiles. Edric, Dowon and Wei Ming share the meeting room laptop's tile. Youngjin has a separate tile.">
       <header className="call-bar">
         <strong>Team sync</strong>
         <span><UsersIcon aria-hidden /> 2 participants</span>
