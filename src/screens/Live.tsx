@@ -248,7 +248,7 @@ export function Live(props: {
                 {s.overlap ? (
                   <strong>Several people</strong>
                 ) : person ? (
-                  <strong>{person.name}</strong>
+                  <strong style={{ color: colorOf(people, person.id) }}>{person.name}</strong>
                 ) : (
                   <SpeakerSelect
                     people={people}
