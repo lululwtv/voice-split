@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { samplePeople } from "./data/sampleMeeting";
 import { createRealEngine, createSampleEngine, useEngineStatus } from "./engine";
 import { audioErrorMessage, requestMeetingTab, requestMic, stopStream } from "./lib/audio";
-import { canPopOut, openPopOut } from "./lib/popOut";
+import { canPopOut, closePopOut, openPopOut } from "./lib/popOut";
 import type { Meeting, Person } from "./types";
 import { Attendees } from "./screens/Attendees";
 import { Connect } from "./screens/Connect";
@@ -13,8 +13,28 @@ import { Review } from "./screens/Review";
 
 type Screen = "home" | "attendees" | "connect" | "live" | "review" | "how";
 
+const paths: Record<Screen, string> = {
+  home: "#/",
+  attendees: "#/people",
+  connect: "#/connect",
+  live: "#/live",
+  review: "#/summary",
+  how: "#/how",
+};
+
+function screenFromUrl(): Screen {
+  const match = (Object.keys(paths) as Screen[]).find((key) => paths[key] === location.hash);
+  return match ?? "home";
+}
+
+/** Live, connect and review need state that a reload loses, so they can't be opened directly. */
+function firstScreen(): Screen {
+  const screen = screenFromUrl();
+  return screen === "how" || screen === "attendees" ? screen : "home";
+}
+
 export function App() {
-  const [screen, setScreen] = useState<Screen>("home");
+  const [screen, setScreen] = useState<Screen>(firstScreen);
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [mic, setMic] = useState<MediaStream | null>(null);
   const [tab, setTab] = useState<MediaStream | null>(null);
@@ -28,6 +48,16 @@ export function App() {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, [screen]);
+
+  useEffect(() => {
+    history.replaceState(null, "", paths[screen]);
+  }, []);
+
+  const navigate = (next: Screen) => {
+    if (next === screen) return;
+    history.pushState(null, "", paths[next]);
+    setScreen(next);
+  };
 
   const releaseAudio = () => {
     stopStream(mic);
@@ -64,19 +94,54 @@ export function App() {
 
   const go = (next: Screen) => {
     if (next === "home" || next === "how") releaseAudio();
-    setScreen(next);
+    navigate(next);
   };
+
+  // Browser back and forward. A finished or abandoned meeting can't be re-entered, so those land on home.
+  useEffect(() => {
+    const onPopState = () => {
+      let target = screenFromUrl();
+      if (screen === "live" && target !== "live") {
+        if (!window.confirm("Leave this meeting? Its lines won't be saved.")) {
+          history.pushState(null, "", paths.live);
+          return;
+        }
+        closePopOut();
+      }
+      const stale =
+        target === "live" ||
+        (target === "review" && !meeting) ||
+        (screen === "review" && (target === "attendees" || target === "connect")) ||
+        (target === "connect" && attendees.length === 0);
+      if (stale) {
+        target = "home";
+        history.replaceState(null, "", paths.home);
+      }
+      if (target === "home" || target === "how") releaseAudio();
+      setScreen(target);
+    };
+    window.addEventListener("popstate", onPopState);
+    return () => window.removeEventListener("popstate", onPopState);
+  }, [screen, meeting, attendees, mic, tab]);
+
+  useEffect(() => {
+    if (screen !== "live") return;
+    const warn = (e: BeforeUnloadEvent) => e.preventDefault();
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [screen]);
 
   const startLive = async () => {
     popup.current = canPopOut() ? await openPopOut().catch(() => null) : null;
     setUseSample(!(createRealEngine && engine === "found"));
-    setScreen("live");
+    navigate("live");
   };
 
   const endMeeting = (finished: Meeting) => {
     popup.current = null;
     releaseAudio();
     setMeeting(finished);
+    history.replaceState(null, "", paths.review);
     setScreen("review");
   };
 
@@ -105,18 +170,18 @@ export function App() {
       {screen === "home" && (
         <Home
           engine={engine}
-          onStart={() => setScreen("attendees")}
+          onStart={() => navigate("attendees")}
           onSample={() => {
             popup.current = null;
             setUseSample(true);
-            setScreen("live");
+            navigate("live");
           }}
         />
       )}
       {screen === "attendees" && (
-        <Attendees onBack={() => setScreen("home")} onNext={(chosen) => {
+        <Attendees onBack={() => history.back()} onNext={(chosen) => {
             setAttendees(chosen);
-            setScreen("connect");
+            navigate("connect");
           }} />
       )}
       {screen === "connect" && (
@@ -128,7 +193,7 @@ export function App() {
           tabError={tabError}
           onConnectMic={connectMic}
           onConnectTab={connectTab}
-          onBack={() => setScreen("attendees")}
+          onBack={() => history.back()}
           onStart={startLive}
         />
       )}
