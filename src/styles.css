@@ -1,10 +1,37 @@
 :root {
+  --bg: #f7f5ef;
+  --surface: #ffffff;
+  --raise: #ebe8df;
+  --ink: #16171b;
+  --primary-hover: #000000;
+  --muted: #5f6168;
+  --line: #dcd8cc;
+  --control-line: #b9b5a9;
+  --unknown: #74767c;
+  --speaker-1: #c4381e;
+  --speaker-2: #1f5fc4;
+  --speaker-3: #6b42c4;
+  --speaker-4: #0a7a61;
+  --speaker-5: #8f5b00;
+  --speaker-6: #b52a6e;
+  --error: #b3261e;
+  --who: var(--ink);
+  --display: "Bricolage Grotesque Variable", system-ui, sans-serif;
+  --mono: "JetBrains Mono Variable", ui-monospace, monospace;
+  font-family: "Figtree Variable", system-ui, sans-serif;
+  color: var(--ink);
+  line-height: 1.5;
+  color-scheme: light;
+}
+:root[data-theme="dark"] {
   --bg: #0a0a0d;
   --surface: #131318;
   --raise: #1c1c23;
   --ink: #f4f2ec;
-  --muted: #8b8b94;
+  --primary-hover: #ffffff;
+  --muted: #a0a0a8;
   --line: #2a2a32;
+  --control-line: #3f3f4a;
   --unknown: #8b8b94;
   --speaker-1: #ff6647;
   --speaker-2: #5b9bff;
@@ -13,12 +40,6 @@
   --speaker-5: #ffc442;
   --speaker-6: #ff6db0;
   --error: #ff7a6b;
-  --who: var(--ink);
-  --display: "Bricolage Grotesque Variable", system-ui, sans-serif;
-  --mono: "JetBrains Mono Variable", ui-monospace, monospace;
-  font-family: "Figtree Variable", system-ui, sans-serif;
-  color: var(--ink);
-  line-height: 1.5;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -37,7 +58,7 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 /* Top bar */
 .topbar { display: flex; align-items: center; gap: 28px; padding: 18px 32px; }
 .brand { border: 0; background: none; padding: 0; font-family: var(--display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.04em; }
-.topbar nav { display: flex; gap: 18px; flex: 1; justify-content: flex-end; }
+.topbar nav { display: flex; align-items: center; gap: 18px; flex: 1; justify-content: flex-end; }
 .topbar nav button { border: 0; background: none; padding: 2px 0; color: var(--muted); font-family: var(--mono); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid transparent; }
 .topbar nav button:hover { color: var(--ink); }
 .topbar nav button.active { color: var(--ink); border-color: var(--ink); }
@@ -53,12 +74,13 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .notice.warn { color: var(--error); }
 .sample-tag { justify-self: start; align-self: start; display: inline-block; padding: 2px 8px; border: 1px solid var(--speaker-5); border-radius: 3px; color: var(--speaker-5); font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; }
 
-.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--line); border-radius: 4px; background: transparent; font-weight: 550; font-size: .875rem; cursor: pointer; white-space: nowrap; transition: border-color 120ms, background 120ms; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 7px; padding: 8px 14px; border: 1px solid var(--control-line); border-radius: 4px; background: transparent; font-weight: 550; font-size: .875rem; cursor: pointer; white-space: nowrap; transition: border-color 120ms, background 120ms; }
 .btn:hover { border-color: var(--ink); }
 .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--bg); }
-.btn.primary:hover { background: #fff; }
+.btn.primary:hover { background: var(--primary-hover); border-color: var(--primary-hover); }
 .btn.large { padding: 14px 26px; font-size: 1rem; }
 .btn:disabled { opacity: .3; cursor: not-allowed; }
+.theme-toggle { color: var(--ink); }
 .icon-btn { display: inline-grid; place-items: center; width: 28px; height: 28px; border: 0; border-radius: 4px; background: none; color: var(--muted); }
 .icon-btn:hover { background: var(--raise); color: var(--ink); }
 .link-btn { display: inline-flex; align-items: center; gap: 4px; border: 0; background: none; padding: 0; color: var(--muted); font-size: .8rem; }

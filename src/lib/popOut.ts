@@ -9,6 +9,7 @@ export async function openPopOut(): Promise<Window> {
     win.document.head.appendChild(node.cloneNode(true));
   });
   win.document.title = "Timbre";
+  win.document.documentElement.dataset.theme = document.documentElement.dataset.theme;
   current = win;
   return win;
 }

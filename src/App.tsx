@@ -1,8 +1,10 @@
 import { useEffect, useRef, useState } from "react";
+import { MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { samplePeople } from "./data/sampleMeeting";
 import { createRealEngine, createSampleEngine, useEngineStatus } from "./engine";
 import { audioErrorMessage, requestMeetingTab, requestMic, stopStream } from "./lib/audio";
 import { canPopOut, closePopOut, openPopOut } from "./lib/popOut";
+import { useTheme } from "./lib/theme";
 import type { Meeting, Person } from "./types";
 import { Attendees } from "./screens/Attendees";
 import { Connect } from "./screens/Connect";
@@ -44,6 +46,7 @@ export function App() {
   const [useSample, setUseSample] = useState(true);
   const popup = useRef<Window | null>(null);
   const engine = useEngineStatus();
+  const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     window.scrollTo(0, 0);
@@ -163,6 +166,14 @@ export function App() {
             )}
             <button className={screen === "how" ? "active" : ""} onClick={() => go("how")}>
               How
+            </button>
+            <button
+              className="icon-btn theme-toggle"
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+              title={theme === "dark" ? "Light mode" : "Dark mode"}
+              onClick={toggleTheme}
+            >
+              {theme === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
             </button>
           </nav>
         </header>
