@@ -298,9 +298,9 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .pitch > section, .pitch > footer { position: relative; width: min(1000px, calc(100% - 224px)); margin-inline: auto; }
 .scene { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); gap: 48px; align-items: center; min-height: 72vh; padding-block: 48px; }
 .caption { font-family: var(--display); font-size: clamp(1.75rem, 3.2vw, 2.75rem); font-weight: 500; line-height: 1.08; letter-spacing: -.028em; text-wrap: balance; }
-.stat-line { margin-bottom: 16px; color: var(--muted); font-size: .95rem; line-height: 1.35; }
-.stat-line sup { line-height: 0; }
-.stat-line a { color: inherit; padding: 0 2px; }
+.stat-line { grid-column: 1 / -1; }
+.stat-line sup { font-size: .45em; line-height: 0; }
+.stat-line a { color: var(--muted); padding: 0 2px; }
 .footnote { flex-basis: 100%; margin-bottom: 4px; font-family: "Figtree Variable", sans-serif; font-size: .78rem; }
 .scene-art { position: relative; }
 .scene-art svg { display: block; width: 100%; height: auto; }

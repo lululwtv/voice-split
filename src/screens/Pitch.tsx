@@ -144,24 +144,22 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <Thread root={root} />
 
       <section className="scene scene-call">
-        <div>
-          <p className="stat-line">
-            More people now meet online or hybrid (86%) than in person.
-            <sup>
-              <a
-                href="#fn1"
-                aria-label="Source"
-                onClick={(e) => {
-                  e.preventDefault();
-                  document.getElementById("fn1")?.scrollIntoView({ behavior: "smooth", block: "center" });
-                }}
-              >
-                1
-              </a>
-            </sup>
-          </p>
-          <p className="caption">Three in the room.<br />One dialing in from home.</p>
-        </div>
+        <p className="caption stat-line">
+          More people now meet online or hybrid (86%) than in person.
+          <sup>
+            <a
+              href="#fn1"
+              aria-label="Source"
+              onClick={(e) => {
+                e.preventDefault();
+                document.getElementById("fn1")?.scrollIntoView({ behavior: "smooth", block: "center" });
+              }}
+            >
+              1
+            </a>
+          </sup>
+        </p>
+        <p className="caption">Three in the room.<br />One dialing in from home.</p>
         <VideoCall />
       </section>
       <section className="scene">
