@@ -5,18 +5,11 @@ import { Steps } from "../components/Steps";
 import type { EngineStatus } from "../engine";
 import { useHeardSound, useLevel } from "../lib/audio";
 
-const guide = [
-  'Join your call in another Chrome tab. For Zoom, choose "Join from your browser".',
-  "Press Connect on the call tab below and open the Chrome tabs list.",
-  'Pick the call\'s tab, turn on "Also share tab audio", then press Share.',
-];
 
 function Source(props: {
   icon: React.ReactNode;
   title: string;
-  hint: string;
-  heardText: string;
-  waitingText: string;
+  hint?: string;
   stream: MediaStream | null;
   onConnect: () => void;
   error: string;
@@ -28,18 +21,11 @@ function Source(props: {
       {props.icon}
       <div>
         <strong>{props.title}</strong>
-        {props.stream ? (
-          <>
-            <Meter level={level} />
-            <p className={heard ? "heard" : ""}>{heard ? props.heardText : props.waitingText}</p>
-          </>
-        ) : (
-          <p>{props.hint}</p>
-        )}
+        {props.stream ? <Meter level={level} /> : props.hint && <p>{props.hint}</p>}
         {props.error && <p className="error" role="alert">{props.error}</p>}
       </div>
       {props.stream ? (
-        <span className="ok"><CheckCircleIcon weight="fill" /> Connected</span>
+        <span className={`ok ${heard ? "heard" : ""}`}><CheckCircleIcon weight="fill" /> {heard ? "Hearing" : "Connected"}</span>
       ) : (
         <button className="btn" onClick={props.onConnect}>{props.error ? "Try again" : "Connect"}</button>
       )}
@@ -67,25 +53,18 @@ export function Connect(props: {
   }, []);
 
   const ready = !!mic && !!tab && consent;
-  const missing = !mic ? "Connect the room microphone" : !tab ? "Connect the call tab" : !consent ? "Confirm everyone knows" : "";
 
   return (
     <main className="page narrow-page">
       <Steps current={1} />
-      <h1 className="step-title">Connect your call</h1>
+      <h1 className="step-title">Connect</h1>
       {wrongBrowser && (
-        <p className="notice warn" role="alert"><InfoIcon /> This browser can't hear another tab or float a window. Open Timbre in Chrome on a computer.</p>
+        <p className="notice warn" role="alert"><InfoIcon /> Open in Chrome on a computer.</p>
       )}
       <section className="panel">
-        <ol className="guide">
-          {guide.map((step) => <li key={step}>{step}</li>)}
-        </ol>
         <Source
           icon={<MicrophoneIcon size={24} />}
-          title="Room microphone"
-          hint="Hears everyone around this laptop."
-          heardText="We can hear the room."
-          waitingText="Say something to test it."
+          title="Room mic"
           stream={mic}
           onConnect={props.onConnectMic}
           error={props.micError}
@@ -93,29 +72,22 @@ export function Connect(props: {
         <Source
           icon={<BrowserIcon size={24} />}
           title="Call tab"
-          hint="Hears people who joined online."
-          heardText="We can hear the call."
-          waitingText="No sound yet. That's normal if nobody online is talking."
+          hint='Turn on "Also share tab audio"'
           stream={tab}
           onConnect={props.onConnectTab}
           error={props.tabError}
         />
         <label className="consent">
           <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          Everyone in this meeting knows it's being transcribed.
+          Everyone knows this is transcribed
         </label>
       </section>
-      {props.engine !== "found" && (
-        <p className="notice"><InfoIcon /> The speech engine is off, so a scripted sample with its own four speakers plays instead of your real call. Your audio connections are still real.</p>
-      )}
+      {props.engine !== "found" && <span className="sample-tag">Sample</span>}
       <div className="step-nav">
         <button className="btn" onClick={props.onBack}>Back</button>
-        <div className="start-wrap">
-          {missing && <small>{missing} to continue</small>}
-          <button className="btn primary large" disabled={!ready} onClick={props.onStart}>
-            <PictureInPictureIcon /> Start and float beside the call
-          </button>
-        </div>
+        <button className="btn primary large" disabled={!ready} onClick={props.onStart}>
+          <PictureInPictureIcon /> Start
+        </button>
       </div>
     </main>
   );

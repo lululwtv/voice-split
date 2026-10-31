@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { Avatar, colorOf, SpeakerSelect } from "../components/people";
+import { colorOf, SpeakerSelect, whoStyle } from "../components/people";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
 import { formatTime, labelAccuracy, talkTime } from "../lib/stats";
@@ -124,7 +124,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
     return (
       <main className="page review">
         <h1>{meeting.title}</h1>
-        <p className="lead">The meeting ended before any lines came through, so there's nothing to review.</p>
+        <p className="lead">No lines</p>
       </main>
     );
   }
@@ -147,9 +147,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
       </div>
 
       {meeting.isSample && (
-        <p className="sample-banner">
-          Sample meeting. The summary, names, scores and mistakes below are scripted to show how review works. They aren't real results.
-        </p>
+        <span className="sample-tag">Sample</span>
       )}
 
       <section className="panel split">
@@ -161,7 +159,6 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             {playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />} {playing ? "Pause" : "Replay"}
           </button>
           <time>{formatTime(time)} / {formatTime(duration)}</time>
-          {meeting.isSample && <small>Moves the marker only. The sample has no sound.</small>}
         </div>
         <SplitTimeline meeting={meeting} time={time} onSeek={(t) => { setTime(t); setPlaying(false); }} />
       </section>
@@ -178,18 +175,16 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
           ) : tab === "transcript" ? (
             <ol className="transcript">
               {segments.map((s) => {
-                const person = people.find((p) => p.id === s.personId);
                 const current = s.start <= time && time < s.end;
                 const also = people.find((p) => p.id === s.alsoHeardId);
                 return (
-                  <li key={s.id} id={`line-${s.id}`} className={current ? "current" : ""}>
+                  <li key={s.id} id={`line-${s.id}`} className={current ? "current" : ""} style={whoStyle(people, s.personId)}>
                     <button className="stamp" aria-label={`Jump to ${formatTime(s.start)}`} onClick={() => { setTime(s.start); setPlaying(false); }}>
                       {formatTime(s.start)}
                     </button>
-                    <Avatar people={people} person={person} />
                     <div className="t-body">
                       {s.overlap ? (
-                        <span className="overlap"><UsersThreeIcon /> Several people at once. Not separated in this version.</span>
+                        <span className="overlap"><UsersThreeIcon /> Overlap</span>
                       ) : (
                         <div className="t-who">
                           <SpeakerSelect people={people} value={s.personId} label={`Speaker of line at ${formatTime(s.start)}`} onChange={(id) => relabel(s.id, id)} />
@@ -203,7 +198,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
                       )}
                       <p>{s.text}</p>
                       {also && (
-                        <span className="also"><WarningCircleIcon /> May include {also.name} too</span>
+                        <span className="also"><WarningCircleIcon /> + {also.name}?</span>
                       )}
                       {open === s.id && <WhyPanel segment={s} people={people} />}
                     </div>
@@ -217,11 +212,11 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
                 const said = segments.filter((s) => s.personId === p.id);
                 return (
                   <article key={p.id}>
-                    <h3><Avatar people={people} person={p} /> {p.name}</h3>
+                    <h3 style={whoStyle(people, p.id)}>{p.name}</h3>
                     {said.length ? (
                       <ul>{said.map((s) => <li key={s.id}><time>{formatTime(s.start)}</time> {s.text}</li>)}</ul>
                     ) : (
-                      <p className="muted">No lines labelled with this name.</p>
+                      <p className="muted">None</p>
                     )}
                   </article>
                 );
@@ -232,16 +227,13 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
 
         <aside className="side">
           <section className="panel">
-            <h3>Labels kept</h3>
+            <h3>Labels</h3>
             <p className="big">{accuracy.percent}%</p>
             <div className="target-track">
               <i style={{ width: `${accuracy.percent}%` }} className={accuracy.percent >= TARGET_PERCENT ? "met" : ""} />
               <b style={{ left: `${TARGET_PERCENT}%` }} />
             </div>
-            <p className="muted">
-              {accuracy.changed} corrected and {accuracy.unnamed} still unnamed, out of {accuracy.total} lines. Target is {TARGET_PERCENT}%.
-              Lines you leave alone count as right, so check them all first.
-            </p>
+            <p className="muted">{accuracy.changed} corrected · {accuracy.unnamed} unnamed · {accuracy.total} lines · target {TARGET_PERCENT}%</p>
           </section>
           <section className="panel">
             <h3>Talk time</h3>

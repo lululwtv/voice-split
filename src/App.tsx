@@ -1,7 +1,6 @@
 import { useEffect, useRef, useState } from "react";
-import { WaveformIcon } from "@phosphor-icons/react";
 import { samplePeople } from "./data/sampleMeeting";
-import { createSampleEngine, useEngineStatus } from "./engine";
+import { createRealEngine, createSampleEngine, useEngineStatus } from "./engine";
 import { audioErrorMessage, requestMeetingTab, requestMic, stopStream } from "./lib/audio";
 import { canPopOut, openPopOut } from "./lib/popOut";
 import type { Meeting, Person } from "./types";
@@ -21,6 +20,8 @@ export function App() {
   const [tab, setTab] = useState<MediaStream | null>(null);
   const [micError, setMicError] = useState("");
   const [tabError, setTabError] = useState("");
+  const [attendees, setAttendees] = useState<Person[]>([]);
+  const [useSample, setUseSample] = useState(true);
   const popup = useRef<Window | null>(null);
   const engine = useEngineStatus();
 
@@ -68,6 +69,7 @@ export function App() {
 
   const startLive = async () => {
     popup.current = canPopOut() ? await openPopOut().catch(() => null) : null;
+    setUseSample(!(createRealEngine && engine === "found"));
     setScreen("live");
   };
 
@@ -83,22 +85,21 @@ export function App() {
       {screen !== "live" && (
         <header className="topbar">
           <button className="brand" onClick={() => go("home")}>
-            <WaveformIcon size={22} weight="bold" /> Timbre
+            timbre
           </button>
           <nav>
             <button className={screen === "home" || screen === "attendees" || screen === "connect" ? "active" : ""} onClick={() => go("home")}>
-              New meeting
+              New
             </button>
             {meeting && (
               <button className={screen === "review" ? "active" : ""} onClick={() => go("review")}>
-                Last meeting
+                Last
               </button>
             )}
             <button className={screen === "how" ? "active" : ""} onClick={() => go("how")}>
-              How it knows
+              How
             </button>
           </nav>
-          <span className="local-badge">Free · Runs on this computer</span>
         </header>
       )}
       {screen === "home" && (
@@ -107,12 +108,16 @@ export function App() {
           onStart={() => setScreen("attendees")}
           onSample={() => {
             popup.current = null;
+            setUseSample(true);
             setScreen("live");
           }}
         />
       )}
       {screen === "attendees" && (
-        <Attendees onBack={() => setScreen("home")} onNext={(_chosen: Person[]) => setScreen("connect")} />
+        <Attendees onBack={() => setScreen("home")} onNext={(chosen) => {
+            setAttendees(chosen);
+            setScreen("connect");
+          }} />
       )}
       {screen === "connect" && (
         <Connect
@@ -129,9 +134,9 @@ export function App() {
       )}
       {screen === "live" && (
         <Live
-          createEngine={createSampleEngine}
-          initialPeople={samplePeople}
-          isSample
+          createEngine={useSample || !createRealEngine ? createSampleEngine : createRealEngine}
+          initialPeople={useSample ? samplePeople : attendees}
+          isSample={useSample}
           initialPopup={popup.current}
           mic={mic}
           tab={tab}

@@ -55,8 +55,7 @@ export function Attendees(props: { onBack: () => void; onNext: (people: Person[]
   return (
     <main className="page narrow-page">
       <Steps current={0} />
-      <h1 className="step-title">Who's in this meeting?</h1>
-      <p className="lead">Each person records their voice once. Voices are saved in this browser only.</p>
+      <h1 className="step-title">Who's here?</h1>
       <section className="panel attendee-panel">
         {people.length > 0 && (
           <ul className="attendees">
@@ -81,7 +80,7 @@ export function Attendees(props: { onBack: () => void; onNext: (people: Person[]
         ) : (
           loaded && (
             <button className="btn" onClick={() => setAdding(true)}>
-              <PlusIcon /> Add someone new
+              <PlusIcon /> Add
             </button>
           )
         )}
@@ -89,7 +88,7 @@ export function Attendees(props: { onBack: () => void; onNext: (people: Person[]
       <div className="step-nav">
         <button className="btn" onClick={props.onBack}>Back</button>
         <button className="btn primary" disabled={chosen.length === 0} onClick={() => props.onNext(chosen)}>
-          Continue with {chosen.length} {chosen.length === 1 ? "person" : "people"} <ArrowRightIcon />
+          Continue <ArrowRightIcon />
         </button>
       </div>
     </main>

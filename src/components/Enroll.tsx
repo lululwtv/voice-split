@@ -100,10 +100,10 @@ export function Enroll({ onAdd, onCancel }: { onAdd: (person: Person) => void; o
       ) : (
         <div className="enroll-actions">
           <button type="button" className="btn" onClick={record}>
-            <MicrophoneIcon /> {clip ? "Record again" : "Record 10 seconds"}
+            <MicrophoneIcon /> {clip ? "Again" : "Record"}
           </button>
           <label className="btn">
-            <UploadSimpleIcon /> Upload a clip
+            <UploadSimpleIcon /> Upload
             <input
               type="file"
               accept="audio/*"
@@ -121,7 +121,7 @@ export function Enroll({ onAdd, onCancel }: { onAdd: (person: Person) => void; o
       {error && <p className="error" role="alert">{error}</p>}
       <div className="enroll-submit">
         {onCancel && <button type="button" className="btn" onClick={onCancel}>Cancel</button>}
-        <button className="btn primary" disabled={!name.trim() || !clip || !!stream}>Add person</button>
+        <button className="btn primary" disabled={!name.trim() || !clip || !!stream}>Add</button>
       </div>
     </form>
   );

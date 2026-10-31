@@ -59,12 +59,12 @@ export function useHeardSound(stream: MediaStream | null, level: number) {
 export function audioErrorMessage(error: unknown, source: "mic" | "tab") {
   const name = error instanceof Error ? error.name : "";
   const message = error instanceof Error ? error.message : "";
-  if (message === "no-audio") return 'That share has no sound. Pick the meeting tab and turn on "Also share tab audio".';
+  if (message === "no-audio") return 'No sound. Turn on "Also share tab audio".';
   if (name === "NotAllowedError") {
     return source === "mic"
-      ? "Microphone access is blocked. Allow it from the icon in Chrome's address bar, then try again."
-      : "Sharing was cancelled. Try again and pick the meeting tab.";
+      ? "Mic blocked. Allow it in the address bar."
+      : "Sharing cancelled.";
   }
-  if (name === "NotFoundError") return "No microphone found. Plug one in and try again.";
-  return source === "mic" ? "Couldn't reach the microphone. Try again." : "Couldn't share that tab. Use Chrome and try again.";
+  if (name === "NotFoundError") return "No mic found.";
+  return source === "mic" ? "Couldn't reach the mic." : "Couldn't share that tab.";
 }

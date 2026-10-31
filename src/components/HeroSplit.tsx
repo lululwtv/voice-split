@@ -22,8 +22,6 @@ export function HeroSplit() {
           </linearGradient>
         ))}
       </defs>
-      <text className="hero-caption" x="0" y="52">One shared mic</text>
-      <text className="hero-caption" x="548" y="22">Every voice, named</text>
       {bars.map((bar, i) => (
         <rect
           key={bar.x}

@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CheckCircleIcon, CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, PlusIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
-import { Avatar, colorOf, SpeakerSelect } from "../components/people";
+import { CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, PlusIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
+import { SpeakerSelect, whoStyle } from "../components/people";
 import type { Engine } from "../engine/types";
 import { liveStatus, type LiveStatus } from "../lib/liveStatus";
 import { canPopOut, openPopOut } from "../lib/popOut";
@@ -28,16 +28,11 @@ function useTrackEnded(stream: MediaStream | null, onEnded: () => void) {
   }, [stream]);
 }
 
-function WrapUp(props: { summaryFailed: boolean; onSkip: () => void }) {
+function WrapUp(props: { onSkip: () => void }) {
   return (
     <div className="wrapup">
-      <h1>Wrapping up your meeting</h1>
-      <ul>
-        <li className="done"><CheckCircleIcon size={22} weight="fill" /> Transcript saved</li>
-        <li className="done"><CheckCircleIcon size={22} weight="fill" /> Speakers labelled</li>
-        <li><CircleNotchIcon size={22} className="spin" /> Writing the summary</li>
-      </ul>
-      <button className="link-btn" onClick={props.onSkip}>See the transcript now</button>
+      <h1>Summarizing<CircleNotchIcon size={34} className="spin" /></h1>
+      <button className="link-btn" onClick={props.onSkip}>Skip</button>
     </div>
   );
 }
@@ -130,7 +125,7 @@ export function Live(props: {
   const complete = (finalSummary: Summary | null) => {
     engine.current?.stop();
     props.onEnd({
-      title: props.isSample ? "Sample: launch planning" : "Meeting",
+      title: props.isSample ? "Launch planning" : "Meeting",
       isSample: props.isSample,
       people,
       segments,
@@ -177,7 +172,7 @@ export function Live(props: {
   };
 
   if (wrapping) {
-    return <main className="live-stage"><WrapUp summaryFailed={summaryFailed} onSkip={() => complete(summary)} /></main>;
+    return <main className="live-stage"><WrapUp onSkip={() => complete(summary)} /></main>;
   }
 
   const status = liveStatus({ paused, ended, engineLost, delaySeconds, silentSeconds });
@@ -200,55 +195,49 @@ export function Live(props: {
           </button>
         )}
       </header>
-      {props.isSample && <p className="sample-tag">Sample meeting. Voices and labels are simulated.</p>}
+      {props.isSample && <span className="sample-tag">Sample</span>}
       {engineLost && !ended && (
-        <p className="alert" role="alert"><WarningIcon /> The speech engine stopped. Lines so far are safe. Restart it, or end the meeting to keep what you have.</p>
+        <p className="alert" role="alert"><WarningIcon /> Engine stopped. Lines saved.</p>
       )}
       {micLost && (
         <div className="alert" role="alert">
-          <WarningIcon /> <span>The microphone disconnected, so the room isn't being heard.</span>
+          <WarningIcon /> <span>Mic disconnected</span>
           <button className="btn" onClick={() => reconnect("mic")}>Reconnect</button>
         </div>
       )}
       {tabLost && (
         <div className="alert" role="alert">
-          <WarningIcon /> <span>The call tab stopped sharing, so people online aren't being heard.</span>
+          <WarningIcon /> <span>Tab stopped sharing</span>
           <button className="btn" onClick={() => reconnect("tab")}>Share again</button>
         </div>
       )}
       {reconnectFailed && (
-        <p className="alert" role="alert"><WarningIcon /> That didn't work. Go to the Timbre tab in Chrome and try there.</p>
+        <p className="alert" role="alert"><WarningIcon /> Failed. Try from the Timbre tab.</p>
       )}
-      {status === "behind" && <p className="note">Lines are about {delaySeconds} seconds behind. Nothing is lost.</p>}
-      {status === "quiet" && <p className="note">No voices for a while. If people are talking, check the mic isn't muted.</p>}
+      {status === "behind" && <p className="note">{delaySeconds}s behind</p>}
       <ul className="speakers">
         {people.map((p) => {
           const level = levels[p.id] ?? 0;
           return (
-            <li key={p.id} className={level > 0 ? "speaking" : ""}>
-              <Avatar people={people} person={p} />
+            <li key={p.id} className={level > 0 ? "speaking" : ""} style={whoStyle(people, p.id)}>
               <span className="speaker-name">{p.name}</span>
-              <span className="bars" style={{ color: colorOf(people, p.id) }} aria-hidden>
-                {[0.6, 1, 0.75, 0.45].map((scale, i) => (
-                  <i key={i} style={{ transform: `scaleY(${Math.max(0.12, level * scale)})` }} />
-                ))}
+              <span className="strand" aria-hidden>
+                <i style={{ transform: `scaleY(${1 + level * 5})` }} />
               </span>
             </li>
           );
         })}
       </ul>
       <ol className="feed" ref={feed} aria-live="polite">
-        {segments.length === 0 && <li className="feed-empty">Lines appear here a few seconds after they're spoken.</li>}
         {segments.map((s) => {
           const person = people.find((p) => p.id === s.personId);
           return (
-            <li key={s.id} className="line">
+            <li key={s.id} className="line" style={whoStyle(people, s.personId)}>
               <div className="line-head">
-                <Avatar people={people} person={person} />
                 {s.overlap ? (
-                  <strong>Several people</strong>
+                  <strong>Overlap</strong>
                 ) : person ? (
-                  <strong style={{ color: colorOf(people, person.id) }}>{person.name}</strong>
+                  <strong>{person.name}</strong>
                 ) : (
                   <SpeakerSelect
                     people={people}
@@ -280,7 +269,7 @@ export function Live(props: {
           </form>
         ) : (
           <button className="link-btn" onClick={() => setAdding(true)}>
-            <PlusIcon /> Someone joined late
+            <PlusIcon /> Add person
           </button>
         )}
         <div className="live-actions">
@@ -291,14 +280,13 @@ export function Live(props: {
           )}
           {!ended && !engineLost && props.isSample && (
             <button className="btn" onClick={() => engine.current?.finish()}>
-              <FastForwardIcon weight="fill" /> Skip to end
+              <FastForwardIcon weight="fill" /> Skip
             </button>
           )}
           <button className="btn primary" onClick={endMeeting}>
-            <StopIcon weight="fill" /> {ended ? "See summary" : "End meeting"}
+            <StopIcon weight="fill" /> {ended ? "Summary" : "End"}
           </button>
         </div>
-        <small>Everything is processed on this computer.</small>
       </footer>
     </div>
   );
@@ -309,8 +297,7 @@ export function Live(props: {
         <>
           {createPortal(panel, popup.document.body)}
           <div className="popped">
-            <h2>Timbre is floating beside your call</h2>
-            <p>It stays on top of other windows. Keep this tab open until the meeting ends.</p>
+            <h2>Floating</h2>
           </div>
         </>
       ) : (
