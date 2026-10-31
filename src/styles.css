@@ -109,6 +109,13 @@ h3 { font-size: .72rem; font-weight: 500; letter-spacing: .1em; text-transform: 
 
 /* Setup steps */
 .meetings-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.sample-voices li { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 60px; border-bottom: 1px solid var(--line); }
+.sample-voices strong { display: block; color: var(--who); font-family: var(--display); font-size: 1.05rem; font-weight: 600; }
+.ok-text { display: inline-flex; align-items: center; gap: 5px; color: var(--speaker-4); font-size: .875rem; font-weight: 550; }
+.sample-recording { display: inline-flex; align-items: center; gap: 10px; min-width: 150px; font-size: .875rem; }
+.sample-recording .meter { flex: 1; margin-top: 0; }
+.sample-meter span { width: 100%; transform-origin: left; animation: sample-level 900ms ease-in-out infinite alternate; }
+@keyframes sample-level { from { transform: scaleX(.2); } to { transform: scaleX(.85); } }
 .narrow-page { max-width: 620px; display: grid; gap: 20px; }
 .steps { display: flex; gap: 18px; font-size: .72rem; color: var(--muted); }
 .steps li { display: flex; align-items: center; gap: 6px; }

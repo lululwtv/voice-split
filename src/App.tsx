@@ -16,8 +16,9 @@ import { Live } from "./screens/Live";
 import { Meetings } from "./screens/Meetings";
 import { Pitch } from "./screens/Pitch";
 import { Review } from "./screens/Review";
+import { SampleConnect, SampleVoices } from "./screens/SampleSetup";
 
-type Screen = "home" | "meetings" | "attendees" | "connect" | "live" | "review" | "how";
+type Screen = "home" | "meetings" | "attendees" | "connect" | "sampleVoices" | "sampleConnect" | "live" | "review" | "how";
 type Room = { id: string; title: string };
 
 const paths: Record<Screen, string> = {
@@ -25,6 +26,8 @@ const paths: Record<Screen, string> = {
   meetings: "#/meetings",
   attendees: "#/people",
   connect: "#/connect",
+  sampleVoices: "#/sample/voices",
+  sampleConnect: "#/sample/connect",
   live: "#/live",
   review: "#/summary",
   how: "#/how",
@@ -60,6 +63,7 @@ export function App() {
   const [attendees, setAttendees] = useState<Person[]>([]);
   const [startEnrollment, setStartEnrollment] = useState(false);
   const [useSample, setUseSample] = useState(true);
+  const [sampleEnrolled, setSampleEnrolled] = useState<Set<string>>(new Set());
   const popup = useRef<Window | null>(null);
   const streams = useRef<(MediaStream | null)[]>([]);
   streams.current = [mic, tab];
@@ -138,7 +142,8 @@ export function App() {
       const stale =
         target === "live" ||
         (target === "review" && !meeting) ||
-        (screen === "review" && (target === "attendees" || target === "connect")) ||
+        (screen === "review" && (target === "attendees" || target === "connect" || target === "sampleVoices" || target === "sampleConnect")) ||
+        (target === "sampleConnect" && sampleEnrolled.size < samplePeople.length) ||
         (target === "connect" && attendees.length === 0);
       if (stale) {
         target = "home";
@@ -150,7 +155,7 @@ export function App() {
     };
     window.addEventListener("popstate", onPopState);
     return () => window.removeEventListener("popstate", onPopState);
-  }, [screen, meeting, attendees, mic, tab]);
+  }, [screen, meeting, attendees, sampleEnrolled, mic, tab]);
 
   useEffect(() => {
     if (screen !== "live") return;
@@ -281,9 +286,8 @@ export function App() {
           engine={engine}
           onStart={() => navigate("meetings")}
           onSample={() => {
-            popup.current = null;
-            setUseSample(true);
-            navigate("live");
+            setSampleEnrolled(new Set());
+            navigate("sampleVoices");
           }}
         />
       )}
@@ -346,6 +350,24 @@ export function App() {
           onStart={startLive}
           onUpload={upload}
           busy={busy}
+        />
+      )}
+      {screen === "sampleVoices" && (
+        <SampleVoices
+          enrolled={sampleEnrolled}
+          onEnroll={(id) => setSampleEnrolled((current) => new Set(current).add(id))}
+          onBack={() => history.back()}
+          onNext={() => navigate("sampleConnect")}
+        />
+      )}
+      {screen === "sampleConnect" && (
+        <SampleConnect
+          onBack={() => history.back()}
+          onStart={async () => {
+            popup.current = canPopOut() ? await openPopOut().catch(() => null) : null;
+            setUseSample(true);
+            navigate("live");
+          }}
         />
       )}
       {screen === "live" && (
