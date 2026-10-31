@@ -84,6 +84,28 @@ Give each approved recording a bounded contribution rather than letting a long r
 
 Do not mix embeddings from different model/preprocessing versions merely because dimensions match. Re-embed retained approved audio when migrating models, or mark references as requiring enrollment if no compatible audio exists. Keep enrollment prompts in a versioned curated collection with Shuffle; runtime LLM generation is optional.
 
+### 5.1 Deliberate filler words in enrollment
+
+Enrollment prompts deliberately include natural fillers, hesitations and short acknowledgments so saved voice references include examples of conversational speech heard in meetings. The current local frontend in `src/components/Enroll.tsx` asks the participant to read these lines naturally, including the fillers:
+
+> Um, yeah, I see what you mean.
+>
+> Uh, I mean, we could try something different tomorrow.
+>
+> Hmm, okay, you know, let’s check the results on Friday.
+
+The intended benefit is better speaker attribution for brief conversational sounds and phrases such as “um,” “uh,” “hmm,” “yeah,” and “okay.” This is a hypothesis to evaluate, not a measured improvement. Voice enrollment creates speaker embeddings; it does not train or fine-tune Whisper to recognize these words.
+
+For the proposed curated prompt collection, mix fillers with varied ordinary sentences and offer alternatives rather than requiring everyone to read this exact script. Ask for a natural pace, pauses and intonation; do not encourage exaggerated fillers. Record the prompt/version with reference provenance when that storage is implemented. Keep matching independent of wording: neither an exact transcript match nor the presence of a filler is required to enroll or identify a speaker. The current fixed script is an implementation detail, not a mandatory phrase whitelist.
+
+### 5.2 Preserving fillers in meeting transcription
+
+The target transcript should preserve audible fillers and hesitations instead of intentionally cleaning them out. Recognizing the words and assigning their speaker are separate requirements: an embedding can help identify a voice, but it cannot restore a word omitted by the transcription model.
+
+Evaluate the existing Whisper backends for filler omissions before choosing decoder settings or an optional transcription prompt. Any proposed prompt must request faithful transcription and must not insert the enrollment script into meeting context or force expected filler words into silence. Test VAD and segment boundaries for clipped or discarded short vocalizations as well as transcription behavior. No dedicated filler detector, filler-specific ASR prompt or ASR fine-tuning is currently implemented.
+
+Compare enrollment with and without fillers using comparable usable speech duration and identical held-out meeting clips. Use consenting speakers, separate recording sessions, fillers absent from the enrollment wording, ordinary non-filler speech, silence and noise. Measure filler precision/recall (including false insertions and omissions), speaker attribution accuracy on filler spans, unknown/ambiguous outcomes and added latency. Set release targets after baseline measurement; keep this experiment separate from any future ASR training dataset or explicit audio-retention feature.
+
 ## 6. Attribution and uncertainty
 
 ### 6.1 Inputs and outcomes
@@ -213,6 +235,7 @@ Start with a confirmed spoken-correction proof of concept after core attribution
 | --- | --- |
 | Word-independent short speech | Real clips across duration bands, including under 0.5 s, 0.5–1 s, 1–2 s, and longer speech; varied words unseen in enrollment; bands are analysis bins, not eligibility limits |
 | Actual-speech enrollment | Silence/noise padding, pauses, multiple prompts, browser/server duration agreement, and replayable VAD annotations |
+| Filler preservation and attribution | Matched-duration enrollment with/without fillers; held-out natural meeting speech; filler precision/recall, false insertions on silence/noise, VAD omissions and attribution accuracy on filler spans, reported separately |
 | Speaker ranking | Multiple enrolled speakers, roster exclusions, exact ties, one candidate, missing references, invalid embeddings, and no evidence |
 | Fusion | Voice-only, microphone-only, and 70/30 comparisons on identical aligned recordings; source leakage, owner conflicts, shared devices, drift, reconnects |
 | Correction integrity | Concurrent automatic update/correction races, reload/export consistency, duplicate requests, changed corrections, and stale learning workers |
