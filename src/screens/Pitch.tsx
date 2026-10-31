@@ -223,6 +223,28 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
         </section>
       )}
 
+      <section className="pitch-section agents" data-thread="section">
+        <p className="eyebrow">Built for agents, not just humans</p>
+        <h2>An agent acts without looking. A wrong name becomes a wrong action.</h2>
+        <p>When a meeting agent assigns "I'll own the migration" to the wrong person, the task goes to the wrong inbox. timbre tells agents when to trust a name, and when not to.</p>
+        <ol className="agent-points">
+          <li><h3>Confidence, not guesses</h3><p>Every attribution carries High, Medium, Low or Uncertain. Similarity is never dressed up as a probability.</p></li>
+          <li><h3>Unknown over wrong</h3><p>A voice that doesn't clear the bar becomes "Unknown speaker," not the closest name.</p></li>
+          <li><h3>Human stays in control</h3><p>Every segment keeps its decision reason and stays editable.</p></li>
+        </ol>
+        <p className="tagline">The data foundation that meeting-driven agents run on.</p>
+      </section>
+
+      <section className="pitch-section" data-thread="section">
+        <h2>Not a demo script. A tested system.</h2>
+        <div className="stats two">
+          <div><strong>85</strong><span>backend tests passing</span></div>
+          <div><strong>40</strong><span>frontend tests passing, production build passing</span></div>
+        </div>
+        <p>Tests cover weak and ambiguous matches, unchecked-speaker competition, unknown-identity persistence, per-meeting isolation, correction persistence and export labels.</p>
+        <p className="limit"><b>Honest limit:</b> real-meeting calibration is still pending, and short clips, noise or overlapping speech can still split one person into two identities. We scoped that out to nail single-channel attribution first.</p>
+      </section>
+
       <section className="pitch-section" data-thread="section">
         <span className="sample-tag">Roadmap</span>
         <h2>A meeting shouldn't end as a note</h2>

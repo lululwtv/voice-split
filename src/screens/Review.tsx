@@ -64,7 +64,7 @@ function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
               <span className="why-track">
                 <i style={{ width: `${m.score * 100}%`, background: colorOf(people, m.personId) }} />
               </span>
-              <span>{Math.round(m.score * 100)}%</span>
+              <span>{m.score.toFixed(2)}</span>
             </li>
           );
         })}
