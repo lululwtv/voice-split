@@ -8,9 +8,9 @@ import { useTheme } from "./lib/theme";
 import type { Meeting, Person } from "./types";
 import { Attendees } from "./screens/Attendees";
 import { Connect } from "./screens/Connect";
-import { Home } from "./screens/Home";
 import { HowItWorks } from "./screens/HowItWorks";
 import { Live } from "./screens/Live";
+import { Pitch } from "./screens/Pitch";
 import { Review } from "./screens/Review";
 
 type Screen = "home" | "attendees" | "connect" | "live" | "review" | "how";
@@ -179,7 +179,7 @@ export function App() {
         </header>
       )}
       {screen === "home" && (
-        <Home
+        <Pitch
           engine={engine}
           onStart={() => navigate("attendees")}
           onSample={() => {

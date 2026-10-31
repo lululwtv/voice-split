@@ -62,8 +62,8 @@ describe("sample meeting", () => {
   it("exports labels into markdown", () => {
     const { people, segments, windows, duration } = buildSampleMeeting();
     const md = toMarkdown({ title: "T", isSample: true, people, segments, windows, duration, summary: sampleSummary });
-    expect(md).toContain("**Wei Jie:** Send the final screenshots (by Monday)");
-    expect(md).toContain("**Maya** [00:01]");
+    expect(md).toContain("**Dowon:** Send the final screenshots (by Monday)");
+    expect(md).toContain("**Edric** [00:01]");
     expect(md).toContain("Sample meeting");
     expect(md).toContain("Overlapping speech");
   });

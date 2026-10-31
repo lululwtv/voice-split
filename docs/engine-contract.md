@@ -11,7 +11,7 @@ The transport isn't decided. A local WebSocket is the likely choice. Whatever ca
 Sent several times a second to drive the speaker meters.
 
 ```json
-{ "type": "activity", "elapsed": 12.4, "levels": { "maya": 0.8 } }
+{ "type": "activity", "elapsed": 12.4, "levels": { "edric": 0.8 } }
 ```
 
 People who aren't speaking are left out of `levels`.
@@ -21,7 +21,7 @@ People who aren't speaking are left out of `levels`.
 A stretch of audio matched to one person. These draw the timeline and talk time, and they keep short replies that a transcript line would swallow.
 
 ```json
-{ "type": "window", "window": { "start": 10.0, "end": 11.6, "personId": "maya" } }
+{ "type": "window", "window": { "start": 10.0, "end": 11.6, "personId": "edric" } }
 ```
 
 ### `segment`
@@ -36,11 +36,11 @@ One finished transcript line. Target: within 3 to 5 seconds of being spoken.
     "start": 10.0,
     "end": 16.0,
     "text": "Two things today.",
-    "personId": "maya",
-    "originalPersonId": "maya",
-    "matches": [{ "personId": "maya", "score": 0.81 }],
+    "personId": "edric",
+    "originalPersonId": "edric",
+    "matches": [{ "personId": "edric", "score": 0.81 }],
     "overlap": false,
-    "alsoHeardId": "priya"
+    "alsoHeardId": "weiming"
   }
 }
 ```
@@ -83,7 +83,7 @@ Sent after `ended`. If it can't be written, send `{ "type": "summary_failed" }`.
     "overview": "One or two sentences on what happened.",
     "decisions": [{ "text": "Launch on the sixteenth.", "sources": ["s5", "s8"] }],
     "actions": [
-      { "text": "Send the screenshots", "ownerId": "weijie", "due": "Monday", "sources": ["s12"] }
+      { "text": "Send the screenshots", "ownerId": "dowon", "due": "Monday", "sources": ["s12"] }
     ],
     "questions": [{ "text": "Will the payment fix land?", "sources": ["s4"] }]
   }

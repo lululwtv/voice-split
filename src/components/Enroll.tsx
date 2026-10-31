@@ -78,7 +78,7 @@ export function Enroll({ onAdd, onCancel }: { onAdd: (person: Person) => void; o
       <div className="enroll-fields">
         <label>
           Name
-          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Maya" />
+          <input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Edric" />
         </label>
         <label>
           Joining
