@@ -364,7 +364,7 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .table-wrap { overflow-x: auto; background: var(--bg); }
 table { width: 100%; border-collapse: collapse; font-size: .925rem; }
 th, td { padding: 12px 14px 12px 0; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; font-weight: 400; }
-thead th { font-family: var(--mono); font-size: .68rem; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); }
+thead th { color: var(--muted); }
 tbody th { font-weight: 600; white-space: nowrap; }
 .ours th, .ours td { font-weight: 650; color: var(--speaker-4); }
 .foot { font-size: .8rem !important; color: var(--muted); }
