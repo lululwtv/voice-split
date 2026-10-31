@@ -278,7 +278,7 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .scene-art { position: relative; }
 .scene-art svg { display: block; width: 100%; height: auto; }
 .art-room { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
-.art-other-room { fill: var(--raise); fill-opacity: .55; stroke: var(--control-line); stroke-width: 1.5; }
+.art-other-room { fill: var(--raise); fill-opacity: .28; stroke: var(--control-line); stroke-width: 1.5; }
 .art-table { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
 .art-solid { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
 .art-stroke { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }

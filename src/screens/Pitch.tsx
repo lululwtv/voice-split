@@ -52,8 +52,8 @@ function Room() {
         <circle data-thread="voice" cx="190" cy="125" r="15" fill={DOWON} />
         <circle data-thread="voice" cx="314" cy="125" r="15" fill={WEI_MING} />
         <circle data-thread="voice" cx="484" cy="125" r="15" fill={YOUNGJIN} />
-        <text x="24" y="312" className="art-text muted-text">Meeting room</text>
-        <text x="436" y="312" className="art-text muted-text">Another room</text>
+        <text x="90" y="312" className="art-text muted-text">Meeting room</text>
+        <text x="494" y="312" className="art-text muted-text">Other room</text>
       </svg>
     </div>
   );
