@@ -6,7 +6,7 @@ import { audioErrorMessage, requestMeetingTab, requestMic, stopStream } from "./
 import { canPopOut, openPopOut } from "./lib/popOut";
 import type { Meeting, Person } from "./types";
 import { Attendees } from "./screens/Attendees";
-import { Connect, type Platform } from "./screens/Connect";
+import { Connect } from "./screens/Connect";
 import { Home } from "./screens/Home";
 import { HowItWorks } from "./screens/HowItWorks";
 import { Live } from "./screens/Live";
@@ -16,7 +16,6 @@ type Screen = "home" | "attendees" | "connect" | "live" | "review" | "how";
 
 export function App() {
   const [screen, setScreen] = useState<Screen>("home");
-  const [platform, setPlatform] = useState<Platform>("meet");
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [mic, setMic] = useState<MediaStream | null>(null);
   const [tab, setTab] = useState<MediaStream | null>(null);
@@ -105,10 +104,7 @@ export function App() {
       {screen === "home" && (
         <Home
           engine={engine}
-          onStart={(choice) => {
-            setPlatform(choice);
-            setScreen("attendees");
-          }}
+          onStart={() => setScreen("attendees")}
           onSample={() => {
             popup.current = null;
             setScreen("live");
@@ -120,7 +116,6 @@ export function App() {
       )}
       {screen === "connect" && (
         <Connect
-          platform={platform}
           engine={engine}
           mic={mic}
           tab={tab}

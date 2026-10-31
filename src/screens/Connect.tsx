@@ -5,18 +5,11 @@ import { Steps } from "../components/Steps";
 import type { EngineStatus } from "../engine";
 import { useHeardSound, useLevel } from "../lib/audio";
 
-export type Platform = "meet" | "zoom";
-
-const guides: Record<Platform, { name: string; steps: string[] }> = {
-  meet: {
-    name: "Google Meet",
-    steps: ["Join your call in another Chrome tab.", "Press Connect below and open the Chrome tabs list.", 'Pick the Meet tab, turn on "Also share tab audio", then press Share.'],
-  },
-  zoom: {
-    name: "Zoom",
-    steps: ['Open the invite link and choose "Join from your browser". The desktop app won\'t work here.', "Press Connect below and open the Chrome tabs list.", 'Pick the Zoom tab, turn on "Also share tab audio", then press Share.'],
-  },
-};
+const guide = [
+  'Join your call in another Chrome tab. For Zoom, choose "Join from your browser".',
+  "Press Connect on the call tab below and open the Chrome tabs list.",
+  'Pick the call\'s tab, turn on "Also share tab audio", then press Share.',
+];
 
 function Source(props: {
   icon: React.ReactNode;
@@ -55,7 +48,6 @@ function Source(props: {
 }
 
 export function Connect(props: {
-  platform: Platform;
   engine: EngineStatus;
   mic: MediaStream | null;
   tab: MediaStream | null;
@@ -66,8 +58,7 @@ export function Connect(props: {
   onBack: () => void;
   onStart: () => void;
 }) {
-  const { platform, mic, tab } = props;
-  const guide = guides[platform];
+  const { mic, tab } = props;
   const [consent, setConsent] = useState(false);
   const [wrongBrowser, setWrongBrowser] = useState(false);
 
@@ -76,18 +67,18 @@ export function Connect(props: {
   }, []);
 
   const ready = !!mic && !!tab && consent;
-  const missing = !mic ? "Connect the room microphone" : !tab ? `Connect the ${guide.name} tab` : !consent ? "Confirm everyone knows" : "";
+  const missing = !mic ? "Connect the room microphone" : !tab ? "Connect the call tab" : !consent ? "Confirm everyone knows" : "";
 
   return (
     <main className="page narrow-page">
       <Steps current={1} />
-      <h1 className="step-title">Connect {guide.name}</h1>
+      <h1 className="step-title">Connect your call</h1>
       {wrongBrowser && (
         <p className="notice warn" role="alert"><InfoIcon /> This browser can't hear another tab or float a window. Open Timbre in Chrome on a computer.</p>
       )}
       <section className="panel">
         <ol className="guide">
-          {guide.steps.map((step) => <li key={step}>{step}</li>)}
+          {guide.map((step) => <li key={step}>{step}</li>)}
         </ol>
         <Source
           icon={<MicrophoneIcon size={24} />}
@@ -101,7 +92,7 @@ export function Connect(props: {
         />
         <Source
           icon={<BrowserIcon size={24} />}
-          title={`${guide.name} tab`}
+          title="Call tab"
           hint="Hears people who joined online."
           heardText="We can hear the call."
           waitingText="No sound yet. That's normal if nobody online is talking."

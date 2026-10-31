@@ -176,13 +176,8 @@ h3 { font-size: .95rem; font-weight: 650; }
 /* Home and setup steps */
 .home { max-width: 760px; padding-top: 72px; }
 .home-lead { margin: 16px 0 40px; font-size: 1.2rem; color: var(--muted); }
-.home h2 { margin-bottom: 12px; }
-.platforms { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
-.platforms button { display: flex; align-items: center; gap: 14px; padding: 18px; text-align: left; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
-.platforms button:hover { border-color: var(--ink); }
-.platforms span { flex: 1; display: grid; }
-.platforms small { color: var(--muted); font-size: .825rem; }
-.sample-link { margin-top: 18px; font-size: .95rem; }
+.home-note { margin-top: 12px; font-size: .875rem; color: var(--muted); }
+.sample-link { margin-top: 20px; font-size: .95rem; }
 .engine-chip { display: flex; align-items: center; gap: 8px; margin-top: 44px; font-size: .85rem; color: var(--muted); }
 .engine-chip i { width: 8px; height: 8px; border-radius: 50%; background: var(--unknown); }
 .engine-chip.off i { background: var(--speaker-5); }
@@ -253,7 +248,7 @@ h3 { font-size: .95rem; font-weight: 650; }
   .topbar { flex-wrap: wrap; gap: 8px 16px; padding: 12px 16px; }
   .topbar nav { order: 3; flex-basis: 100%; overflow-x: auto; }
   .page { padding: 24px 16px 48px; }
-  .platforms, .review-grid, .journey, .how-detail { grid-template-columns: 1fr; }
+  .review-grid, .journey, .how-detail { grid-template-columns: 1fr; }
   .home { padding-top: 32px; }
   .side { position: static; }
 }
