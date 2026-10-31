@@ -1,9 +1,9 @@
 import type { Meeting, Segment } from "../types";
-import { formatTime } from "./stats";
+import { formatTime, speakerNotes } from "./stats";
 
 function speakerName(meeting: Meeting, segment: Segment) {
   if (segment.overlap) return "Overlapping speech";
-  return meeting.people.find((p) => p.id === segment.personId)?.name ?? "Unknown";
+  return meeting.people.find((p) => p.id === segment.personId)?.name ?? segment.speakerLabel ?? "Unknown";
 }
 
 export function summaryToMarkdown(meeting: Meeting) {
@@ -32,10 +32,9 @@ export function toMarkdown(meeting: Meeting) {
     out.push(`**${speakerName(meeting, s)}** [${formatTime(s.start)}]: ${s.text}`, "");
   }
   out.push("## Notes by speaker", "");
-  for (const person of meeting.people) {
-    const said = meeting.segments.filter((s) => s.personId === person.id);
-    if (!said.length) continue;
-    out.push(`### ${person.name}`, "", ...said.map((s) => `- [${formatTime(s.start)}] ${s.text}`), "");
+  for (const group of speakerNotes(meeting.people, meeting.segments)) {
+    if (!group.segments.length) continue;
+    out.push(`### ${group.name}`, "", ...group.segments.map((s) => `- [${formatTime(s.start)}] ${s.text}`), "");
   }
   return out.join("\n");
 }

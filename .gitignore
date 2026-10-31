@@ -2,3 +2,14 @@ node_modules
 dist
 .DS_Store
 .playwright-mcp
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+.data/
+static/
+.env
+.env.*
+!.env.example
+data/
+*.egg-info/

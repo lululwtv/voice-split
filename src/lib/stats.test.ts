@@ -5,13 +5,20 @@ import { createSimulatedEngine } from "../engine/simulatedEngine";
 import type { Segment } from "../types";
 import { toMarkdown } from "./export";
 import { buildPayload, isValidTarget, publishItems, type PublishSettings } from "./publish";
-import { formatTime, labelAccuracy, talkTime } from "./stats";
+import { formatTime, isCorrected, labelAccuracy, talkTime } from "./stats";
 
 const line = (over: Partial<Segment>): Segment => ({
   id: "x", start: 0, end: 1, text: "", personId: "a", originalPersonId: "a", matches: [], ...over,
 });
 
 describe("labelAccuracy", () => {
+  it("keeps manual corrections when a reviewer selects the original candidate again", () => {
+    const corrected = line({ assignment_source: "manual" });
+    expect(isCorrected(corrected)).toBe(true);
+    expect(labelAccuracy([corrected])).toEqual({ total: 1, changed: 1, unnamed: 0, percent: 0 });
+    expect(isCorrected(line({ assignment_source: "automatic" }))).toBe(false);
+    expect(isCorrected(line({ personId: "b" }))).toBe(true);
+  });
   it("counts changed and unnamed lines as wrong and ignores overlaps", () => {
     const result = labelAccuracy([
       line({}),

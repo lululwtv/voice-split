@@ -7,12 +7,14 @@ export type EngineEvent =
   | { type: "segment"; segment: Segment }
   | { type: "ended"; duration: number }
   | { type: "status"; delaySeconds: number }
-  | { type: "error" }
+  | { type: "error"; message?: string }
   | { type: "summary"; summary: Summary }
-  | { type: "summary_failed" };
+  | { type: "summary_failed" }
+  | { type: "participants"; ids: string[] };
 
 export interface Engine {
   start(onEvent: (event: EngineEvent) => void): void;
+  reconnectAudio?(): void;
   pause(): void;
   resume(): void;
   /** Delivers everything left at once, ends, then writes the summary. */

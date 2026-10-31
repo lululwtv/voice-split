@@ -3,13 +3,10 @@ import { ArrowRightIcon, CheckCircleIcon, GithubLogoIcon, MicrophoneIcon, PhoneD
 import { HeroSplit } from "../components/HeroSplit";
 import { Thread } from "../components/Thread";
 import { TypingBubble } from "../components/TypingBubble";
-import { createRealEngine, type EngineStatus } from "../engine";
+import type { EngineStatus } from "../engine";
 
 const REPO = "https://github.com/lululwtv/voice-split";
 const engineText: Record<EngineStatus, string> = { checking: "Engine…", off: "Engine off", found: "Engine on" };
-
-// These claims describe the working engine, so they stay hidden until it is connected.
-const engineConnected = createRealEngine !== null;
 
 const EDRIC = "var(--speaker-1)";
 const DOWON = "var(--speaker-2)";
@@ -194,7 +191,7 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
               {prices.map(([tool, free, entry, team]) => (
                 <tr key={tool}><th scope="row">{tool}</th><td>{free}</td><td>{entry}</td><td>{team}</td></tr>
               ))}
-              {engineConnected && <tr className="ours"><th scope="row">timbre</th><td>Unlimited</td><td>$0</td><td>$0</td></tr>}
+              <tr className="ours"><th scope="row">timbre</th><td>Unlimited</td><td>$0</td><td>$0</td></tr>
             </tbody>
           </table>
         </div>
@@ -225,7 +222,7 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
 
       <section className="pitch-section demo" data-thread="section">
         <h2>Live demo</h2>
-        <p>{engineConnected ? "Record three voices, enroll them, and watch the single channel split into named, colored tracks in real time." : "Enroll the voices in this room, then start the meeting."}</p>
+        <p>Enroll the voices in this room, start the meeting, and watch one shared channel split into named speakers.</p>
         {startButtons}
       </section>
 
@@ -238,22 +235,20 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
               {others.map(([tool, code, voice]) => (
                 <tr key={tool}><th scope="row">{tool}</th><td>{code}</td><td>{voice}</td></tr>
               ))}
-              {engineConnected && <tr className="ours"><th scope="row">timbre</th><td>MIT</td><td>Consent-based enrollment, runs locally, built for the shared mic.</td></tr>}
+              <tr className="ours"><th scope="row">timbre</th><td>MIT</td><td>Consent-based enrollment, runs locally, built for the shared mic.</td></tr>
             </tbody>
           </table>
         </div>
         <p className="foot">Sources: <Source href="https://wisprflow.ai/notetaker/otter-vs-fireflies-how-the-ai-notetakers-compare">Wispr Flow's comparison page</Source>, <Source href="https://help.fellow.ai/en/articles/10657637-speaker-identification-for-remote-hybrid-meetings">Fellow</Source>, <Source href="https://circleback.ai/releases/automatic-participant-identification-for-hybrid-meetings">Circleback</Source>.</p>
       </section>
 
-      {engineConnected && (
-        <section className="pitch-section" data-thread="section">
-          <h2>Before and after</h2>
-          <div className="stats two">
-            <div><strong>$19.99</strong><span>per seat, per month. Otter Business, about $12,000 a year for 50 people.</span></div>
-            <div><strong>$0</strong><span>Open source, runs locally.</span></div>
-          </div>
-        </section>
-      )}
+      <section className="pitch-section" data-thread="section">
+        <h2>Before and after</h2>
+        <div className="stats two">
+          <div><strong>$19.99</strong><span>per seat, per month. Otter Business, about $12,000 a year for 50 people.</span></div>
+          <div><strong>$0</strong><span>Open source, runs locally.</span></div>
+        </div>
+      </section>
 
       <section className="pitch-section agents" data-thread="section">
         <p className="eyebrow">Built for agents, not just humans</p>

@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { samplePeople } from "./data/sampleMeeting";
-import { createRealEngine, createSampleEngine, useEngineStatus } from "./engine";
-import { audioErrorMessage, requestMeetingTab, requestMic, stopStream } from "./lib/audio";
+import { createLocalEngine, createSampleEngine, useEngineHealth, type EngineStatus } from "./engine";
+import { loadMeeting, request, roomPath } from "./lib/api";
+import { audioErrorMessage, requestMeetingTab, requestMic, stopStream, toWav } from "./lib/audio";
+import { loadPeople } from "./lib/peopleStore";
 import { canPopOut, closePopOut, openPopOut } from "./lib/popOut";
 import { useTheme } from "./lib/theme";
 import type { Meeting, Person } from "./types";
@@ -10,13 +12,16 @@ import { Attendees } from "./screens/Attendees";
 import { Connect } from "./screens/Connect";
 import { HowItWorks } from "./screens/HowItWorks";
 import { Live } from "./screens/Live";
+import { Meetings } from "./screens/Meetings";
 import { Pitch } from "./screens/Pitch";
 import { Review } from "./screens/Review";
 
-type Screen = "home" | "attendees" | "connect" | "live" | "review" | "how";
+type Screen = "home" | "meetings" | "attendees" | "connect" | "live" | "review" | "how";
+type Room = { id: string; title: string };
 
 const paths: Record<Screen, string> = {
   home: "#/",
+  meetings: "#/meetings",
   attendees: "#/people",
   connect: "#/connect",
   live: "#/live",
@@ -32,32 +37,46 @@ function screenFromUrl(): Screen {
 /** Live, connect and review need state that a reload loses, so they can't be opened directly. */
 function firstScreen(): Screen {
   const screen = screenFromUrl();
-  return screen === "how" || screen === "attendees" ? screen : "home";
+  return screen === "how" || screen === "meetings" || screen === "attendees" ? screen : "home";
 }
 
 export function App() {
   const [screen, setScreen] = useState<Screen>(firstScreen);
   const [meeting, setMeeting] = useState<Meeting | null>(null);
+  const [room, setRoom] = useState<Room | null>(null);
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [selectedRoom, setSelectedRoom] = useState("");
+  const [title, setTitle] = useState("");
   const [mic, setMic] = useState<MediaStream | null>(null);
   const [tab, setTab] = useState<MediaStream | null>(null);
   const [micError, setMicError] = useState("");
   const [tabError, setTabError] = useState("");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const [attendees, setAttendees] = useState<Person[]>([]);
+  const [startEnrollment, setStartEnrollment] = useState(false);
   const [useSample, setUseSample] = useState(true);
   const popup = useRef<Window | null>(null);
-  const engine = useEngineStatus();
+  const streams = useRef<(MediaStream | null)[]>([]);
+  streams.current = [mic, tab];
+  const health = useEngineHealth();
+  const engine: EngineStatus = health === null ? "checking" : health.ready ? "found" : "off";
   const { theme, toggle: toggleTheme } = useTheme();
 
   useEffect(() => {
     window.scrollTo(0, 0);
+    if (screen === "meetings") void request<Room[]>("/api/rooms").then(setRooms).catch((e: Error) => setError(e.message));
   }, [screen]);
 
   useEffect(() => {
     history.replaceState(null, "", paths[screen]);
   }, []);
 
+  useEffect(() => () => streams.current.forEach(stopStream), []);
+
   const navigate = (next: Screen) => {
     if (next === screen) return;
+    setError("");
     history.pushState(null, "", paths[next]);
     setScreen(next);
   };
@@ -105,7 +124,7 @@ export function App() {
     const onPopState = () => {
       let target = screenFromUrl();
       if (screen === "live" && target !== "live") {
-        if (!window.confirm("Leave this meeting? Its lines won't be saved.")) {
+        if (!window.confirm("Leave this meeting?")) {
           history.pushState(null, "", paths.live);
           return;
         }
@@ -121,6 +140,7 @@ export function App() {
         history.replaceState(null, "", paths.home);
       }
       if (target === "home" || target === "how") releaseAudio();
+      setError("");
       setScreen(target);
     };
     window.addEventListener("popstate", onPopState);
@@ -134,16 +154,85 @@ export function App() {
     return () => window.removeEventListener("beforeunload", warn);
   }, [screen]);
 
-  const startLive = async () => {
-    popup.current = canPopOut() ? await openPopOut().catch(() => null) : null;
-    setUseSample(!(createRealEngine && engine === "found"));
-    navigate("live");
+  const prepare = async () => {
+    const current = rooms.find((r) => r.id === selectedRoom) ?? await request<Room>("/api/rooms", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: title.trim() || `Meeting · ${new Date().toLocaleString()}` }),
+    });
+    const roster = await request<{ revision: number }>(`${roomPath(current.id)}/participants`);
+    await request(`${roomPath(current.id)}/participants`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ participant_ids: attendees.map((p) => p.id), expected_revision: roster.revision }),
+    });
+    setRoom(current);
+    setSelectedRoom(current.id);
+    return current;
   };
+
+  const startLive = async () => {
+    setBusy(true);
+    setError("");
+    // Chrome only opens the floating window straight after a click, so it comes before the network calls.
+    popup.current = canPopOut() ? await openPopOut().catch(() => null) : null;
+    try {
+      await prepare();
+      setUseSample(false);
+      navigate("live");
+    } catch (e) {
+      closePopOut();
+      popup.current = null;
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const openRoom = async () => {
+    const current = rooms.find((r) => r.id === selectedRoom);
+    if (!current) return;
+    setBusy(true);
+    setError("");
+    try {
+      const [people, roster] = await Promise.all([
+        loadPeople(),
+        request<{ participant_ids: string[] }>(`${roomPath(current.id)}/participants`),
+      ]);
+      setRoom(current);
+      setMeeting(await loadMeeting(current, people.filter((p) => roster.participant_ids.includes(p.id))));
+      navigate("review");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const upload = async (file: File) => {
+    setBusy(true);
+    setError("");
+    try {
+      const current = await prepare();
+      const body = new FormData();
+      body.append("file", await toWav(file), "recording.wav");
+      await request(`${roomPath(current.id)}/transcribe`, { method: "POST", body });
+      setMeeting(await loadMeeting(current, attendees));
+      releaseAudio();
+      navigate("review");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const realEngine = useCallback(() => createLocalEngine(room!.id, () => streams.current), [room?.id]);
 
   const endMeeting = (finished: Meeting) => {
     popup.current = null;
     releaseAudio();
-    setMeeting(finished);
+    setMeeting(useSample ? finished : { ...finished, roomId: room?.id, title: room?.title ?? "Meeting" });
     history.replaceState(null, "", paths.review);
     setScreen("review");
   };
@@ -156,8 +245,8 @@ export function App() {
             timbre
           </button>
           <nav>
-            <button className={screen === "home" || screen === "attendees" || screen === "connect" ? "active" : ""} onClick={() => go("home")}>
-              New
+            <button className={["meetings", "attendees", "connect"].includes(screen) ? "active" : ""} onClick={() => go("meetings")}>
+              Meetings
             </button>
             {meeting && (
               <button className={screen === "review" ? "active" : ""} onClick={() => go("review")}>
@@ -178,10 +267,12 @@ export function App() {
           </nav>
         </header>
       )}
+      {error && <p className="notice warn app-message" role="alert">{error}</p>}
+      {busy && <p className="notice app-message" role="status">Working locally…</p>}
       {screen === "home" && (
         <Pitch
           engine={engine}
-          onStart={() => navigate("attendees")}
+          onStart={() => navigate("meetings")}
           onSample={() => {
             popup.current = null;
             setUseSample(true);
@@ -189,11 +280,51 @@ export function App() {
           }}
         />
       )}
+      {screen === "meetings" && (
+        <Meetings
+          engine={engine}
+          onStart={() => {
+            setStartEnrollment(false);
+            navigate("attendees");
+          }}
+          onRecordVoice={() => {
+            setStartEnrollment(true);
+            navigate("attendees");
+          }}
+        >
+          <section className="room-controls">
+            <label>
+              Meeting{" "}
+              <select value={selectedRoom} onChange={(e) => setSelectedRoom(e.target.value)}>
+                <option value="">New meeting</option>
+                {rooms.map((r) => <option key={r.id} value={r.id}>{r.title}</option>)}
+              </select>
+            </label>
+            {selectedRoom ? (
+              <button className="btn" disabled={busy} onClick={openRoom}>Open transcript</button>
+            ) : (
+              <label>
+                Meeting name{" "}
+                <input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="e.g. Friday catch-up" maxLength={100} />
+              </label>
+            )}
+            <p className="muted">
+              {health?.error || (health?.loading ? "Preparing local speech models…" : `Local workspace${health?.version ? ` · v${health.version}` : ""}. Saved voices and transcripts stay on this machine.`)}
+            </p>
+          </section>
+        </Meetings>
+      )}
       {screen === "attendees" && (
-        <Attendees onBack={() => history.back()} onNext={(chosen) => {
+        <Attendees
+          startEnrollment={startEnrollment}
+          roomId={selectedRoom || undefined}
+          onBack={() => history.back()}
+          onNext={(chosen) => {
+            setStartEnrollment(false);
             setAttendees(chosen);
             navigate("connect");
-          }} />
+          }}
+        />
       )}
       {screen === "connect" && (
         <Connect
@@ -206,11 +337,14 @@ export function App() {
           onConnectTab={connectTab}
           onBack={() => history.back()}
           onStart={startLive}
+          onUpload={upload}
+          busy={busy}
         />
       )}
       {screen === "live" && (
         <Live
-          createEngine={useSample || !createRealEngine ? createSampleEngine : createRealEngine}
+          createEngine={useSample ? createSampleEngine : realEngine}
+          roomId={useSample ? undefined : room?.id}
           initialPeople={useSample ? samplePeople : attendees}
           isSample={useSample}
           initialPopup={popup.current}
@@ -221,7 +355,7 @@ export function App() {
           onEnd={endMeeting}
         />
       )}
-      {screen === "review" && meeting && <Review meeting={meeting} onChange={setMeeting} />}
+      {screen === "review" && meeting && <Review key={meeting.roomId ?? "sample"} meeting={meeting} onChange={setMeeting} />}
       {screen === "how" && <HowItWorks />}
     </div>
   );
