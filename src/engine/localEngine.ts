@@ -65,6 +65,7 @@ export function createLocalEngine(roomId: string, getStreams: () => (MediaStream
     worklet.connect(silent).connect(audio.destination);
     sources = streams
       .map((stream) => { const source = audio.createMediaStreamSource(stream); source.connect(worklet); return source; });
+    emit({ type: "audio_ready" });
   };
   const complete = () => {
     if (!finishing || !active || completed) return;
@@ -81,7 +82,7 @@ export function createLocalEngine(roomId: string, getStreams: () => (MediaStream
       url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
       url.searchParams.set("device", crypto.randomUUID());
       socket = new WebSocket(url);
-      socket.onopen = () => { if (active) void capture().catch((error: Error) => emit({ type: "error", message: error.message })); };
+      socket.onopen = () => { if (active) void capture().catch((error: Error) => emit({ type: "audio_error", message: error.message })); };
       socket.onmessage = ({ data }) => {
         if (!active) return;
         const event = JSON.parse(data);
@@ -101,9 +102,9 @@ export function createLocalEngine(roomId: string, getStreams: () => (MediaStream
         emit({ type: "activity", levels: {}, elapsed });
       }, 250);
     },
-    reconnectAudio() { if (active && !paused && !finishing && socket?.readyState === WebSocket.OPEN) void detach().then(capture).catch((error: Error) => emit({ type: "error", message: error.message })); },
+    reconnectAudio() { if (active && !paused && !finishing && socket?.readyState === WebSocket.OPEN) void detach().then(capture).catch((error: Error) => emit({ type: "audio_error", message: error.message })); },
     pause() { paused = true; void detach().then(() => { if (socket?.readyState === WebSocket.OPEN) socket.send(JSON.stringify({ type: "flush", request_id: crypto.randomUUID() })); }); },
-    resume() { paused = false; void capture().catch((error: Error) => emit({ type: "error", message: error.message })); },
+    resume() { paused = false; void capture().catch((error: Error) => emit({ type: "audio_error", message: error.message })); },
     finish() {
       if (finishing) return;
       finishing = true;

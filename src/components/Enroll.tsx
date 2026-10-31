@@ -62,6 +62,7 @@ export function Enroll({ onAdd, onCancel, initialPerson }: { onAdd: (person: Per
       const rec = new MediaRecorder(mic);
       rec.ondataavailable = (e) => chunks.push(e.data);
       rec.onstop = () => {
+        clearInterval(timer.current);
         stopStream(mic);
         microphone.current = null;
         if (!active.current) return;
@@ -140,7 +141,7 @@ export function Enroll({ onAdd, onCancel, initialPerson }: { onAdd: (person: Per
               hidden
               onChange={(e) => {
                 const file = e.target.files?.[0];
-                if (file) setNewClip(file);
+                if (file) { setError(""); setNewClip(file); }
                 e.target.value = "";
               }}
             />

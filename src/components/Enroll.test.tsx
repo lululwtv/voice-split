@@ -56,6 +56,21 @@ beforeEach(() => {
 afterEach(() => { vi.restoreAllMocks(); vi.unstubAllGlobals(); });
 
 describe("voice enrollment microphone lifecycle", () => {
+  it("clears the countdown when the recorder stops unexpectedly", async () => {
+    vi.useFakeTimers();
+    const mic = microphone(); vi.mocked(requestMic).mockResolvedValue(mic.stream);
+    const form = render();
+    try {
+      await form.record();
+      await vi.advanceTimersByTimeAsync(20000);
+      Recorder.instances[0].stop();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(vi.getTimerCount()).toBe(0);
+      await form.record();
+      await vi.advanceTimersByTimeAsync(25000);
+      expect(Recorder.instances[1].state).toBe("recording");
+    } finally { form.unmount(); vi.useRealTimers(); }
+  });
   it("stops a microphone granted after the form was cancelled", async () => {
     const mic = microphone();
     let grant!: (stream: MediaStream) => void;

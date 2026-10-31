@@ -8,6 +8,9 @@ interface Identification {
 }
 
 export interface RawSegment {
+  track_id?: string | null;
+  stream_id?: string | null;
+  device_id?: string | null;
   unknown_id?: string | null;
   id: string;
   start: number;
@@ -55,6 +58,7 @@ export function toSegment(row: RawSegment): Segment {
   const candidateId = (original ?? row.identification)?.candidate_profile_id ?? originalPersonId;
   return {
     id: row.id, start: row.start, end: row.end, text: row.text,
+    track_id: row.track_id, stream_id: row.stream_id, device_id: row.device_id,
     speakerLabel: row.speaker, unknownId: row.unknown_id, confidence: row.identification?.confidence,
     personId, profile_id: personId, originalPersonId,
     matches: candidateId !== null && typeof score === "number" && Number.isFinite(score)

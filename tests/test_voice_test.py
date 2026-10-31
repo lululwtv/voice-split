@@ -62,7 +62,7 @@ def test_voice_test_lower_threshold_still_requires_candidate_gap(voice_test, mon
     monkeypatch.setattr(server.engines, "embed", lambda audio: np.array([.36, np.sqrt(1 - .36**2), 0.]))
     result = client.post("/api/voice-test", files=files).json()
     assert result["speaker"] == "Alex"
-    assert result["identification"]["threshold"] == .35
+    assert result["identification"]["threshold"] == .30
     server.profiles.enroll("Sam", np.array([1., .01, 0.]))
     assert client.post("/api/voice-test", files=files).json()["speaker"] == "Unknown"
 

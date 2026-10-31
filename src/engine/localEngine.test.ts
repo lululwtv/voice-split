@@ -78,6 +78,22 @@ afterEach(async () => {
 });
 
 describe("local audio engine", () => {
+  it("recovers missing audio on the same socket without a fatal engine error", async () => {
+    let streams: MediaStream[] = [];
+    const engine = createLocalEngine("room", () => streams);
+    engines.push(engine);
+    const events: EngineEvent[] = [];
+    engine.start((event) => events.push(event));
+    Socket.instances.at(-1)!.open();
+    await settle();
+    expect(events.at(-1)?.type).toBe("audio_error");
+    streams = [{ getAudioTracks: () => [{ readyState: "live" }] } as unknown as MediaStream];
+    engine.reconnectAudio?.();
+    await settle();
+    expect(events.at(-1)?.type).toBe("audio_ready");
+    expect(events.some((event) => event.type === "error")).toBe(false);
+    expect(Socket.instances).toHaveLength(1);
+  });
   it("opens the exact room v2 websocket and sends captured PCM", async () => {
     const { socket, worklet, audio } = await start();
     expect(socket.url.protocol).toBe("wss:");
@@ -116,7 +132,7 @@ describe("local audio engine", () => {
     expect(events.at(-1)?.type).toBe("segment");
     expect(events.some((event) => event.type === "ended")).toBe(false);
     socket.receive({ type: "flushed", request_id: request.request_id });
-    expect(events.map((event) => event.type)).toEqual(["segment", "ended", "summary_failed"]);
+    expect(events.map((event) => event.type)).toEqual(["audio_ready", "segment", "ended", "summary_failed"]);
     expect(events.find((event) => event.type === "ended")).toEqual({ type: "ended", duration: 2.5 });
     socket.receive({ type: "flushed", request_id: request.request_id });
     expect(events.filter((event) => event.type === "ended")).toHaveLength(1);
@@ -181,7 +197,7 @@ describe("local audio engine", () => {
     engine.start((event) => events.push(event));
     Socket.instances.at(-1)!.open();
     await settle();
-    expect(events).toContainEqual({ type: "error", message: expect.any(String) });
+    expect(events).toContainEqual({ type: "audio_error", message: expect.any(String) });
     expect(Audio.instances.every((audio) => audio.createMediaStreamSource.mock.calls.length === 0)).toBe(true);
   });
 });

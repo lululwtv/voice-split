@@ -13,7 +13,7 @@ class MeetingMatcher:
     def __init__(self, engines, profiles, store):
         self.engines, self.profiles, self.store = engines, profiles, store
         self.model = getattr(engines, "speaker_name", "test-unspecified")
-        self.threshold = float(os.getenv("VOICE_SPLIT_OPEN_THRESHOLD", ".55"))
+        self.threshold = float(os.getenv("VOICE_SPLIT_OPEN_THRESHOLD", str(profiles.threshold)))
         self.margin = float(os.getenv("VOICE_SPLIT_OPEN_MARGIN", ".08"))
         self.unknown_threshold = float(os.getenv("VOICE_SPLIT_UNKNOWN_THRESHOLD", ".65"))
         if not all(0 <= value <= 1 for value in (self.threshold, self.margin, self.unknown_threshold)):
@@ -37,17 +37,14 @@ class MeetingMatcher:
         return self._identify(room_id, samples, participant_ids, create_unknown=True, mature=True)
 
     def assess_scores(self, samples, participant_ids):
-        return self._identify(None, samples, participant_ids, create_unknown=False, include_scores=True,
-                              base_threshold=.35)
+        return self._identify(None, samples, participant_ids, create_unknown=False, include_scores=True)
 
-    def _identify(self, room_id, samples, participant_ids, *, create_unknown, mature=False, include_scores=False,
-                  base_threshold=None):
+    def _identify(self, room_id, samples, participant_ids, *, create_unknown, mature=False, include_scores=False):
         samples = np.asarray(samples)
         if samples.ndim != 1:
             samples = np.empty(0)
         duration = len(samples) / 16000
-        threshold = round(min(1., (self.threshold if base_threshold is None else base_threshold)
-                              + (.05 if duration < .5 else 0)), 6)
+        threshold = self.threshold
         info = dict(reason="embedding_unavailable", confidence="unavailable", speech_seconds=round(duration, 3),
                     candidate=None, candidate_profile_id=None, margin=None, threshold=threshold,
                     min_margin=self.margin, calibrated=False)

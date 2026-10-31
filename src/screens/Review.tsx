@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { colorOf, SpeakerSelect, whoStyle, NameVoice } from "../components/people";
+import { DownloadSimpleIcon, PauseIcon, PlayIcon } from "@phosphor-icons/react";
+import { colorOf, whoStyle } from "../components/people";
+import { TranscriptTurn } from "../components/TranscriptTurn";
+import { groupTranscriptTurns } from "../lib/transcriptTurns";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
 import { correctSpeaker, loadMeeting, mergeSegment, roomPath } from "../lib/api";
-import { formatTime, isCorrected, labelAccuracy, speakerNotes, talkTime } from "../lib/stats";
-import type { Meeting, Person, Segment } from "../types";
+import { formatTime, labelAccuracy, speakerNotes, talkTime } from "../lib/stats";
+import type { Meeting } from "../types";
 
 function SplitTimeline(props: { meeting: Meeting; time: number; onSeek: (t: number) => void }) {
   const { people, windows, duration } = props.meeting;
@@ -50,35 +52,11 @@ function SplitTimeline(props: { meeting: Meeting; time: number; onSeek: (t: numb
   );
 }
 
-function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
-  return (
-    <div className="why">
-      <p>Voice similarity (not an accuracy percentage):</p>
-      {segment.personId === null && <p>No enrolled voice matched reliably. The closest candidate below was not assigned.</p>}
-      <ul>
-        {segment.matches.map((m) => {
-          const person = people.find((p) => p.id === m.personId);
-          return (
-            <li key={m.personId}>
-              <span>{person?.name ?? m.personId}</span>
-              <span className="why-track">
-                <i style={{ width: `${Math.max(0, Math.min(1, m.score)) * 100}%`, background: colorOf(people, m.personId) }} />
-              </span>
-              <span>{m.score.toFixed(2)}</span>
-            </li>
-          );
-        })}
-      </ul>
-    </div>
-  );
-}
-
 export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: Meeting) => void }) {
   const [tab, setTab] = useState<"summary" | "transcript" | "notes">(meeting.isSample ? "summary" : "transcript");
   const [jumpTo, setJumpTo] = useState<string | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
-  const [open, setOpen] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const scope = useRef({ roomId: meeting.roomId, active: true });
@@ -88,6 +66,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
     return () => { scope.current.active = false; };
   }, []);
   const { people, segments, windows, duration } = meeting;
+  const turns = groupTranscriptTurns(segments);
 
   useEffect(() => {
     if (!playing) return;
@@ -105,7 +84,10 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
 
   useEffect(() => {
     if (tab !== "transcript" || !jumpTo) return;
-    document.getElementById(`line-${jumpTo}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const member = document.getElementById(`line-${jumpTo}`);
+    const details = member?.closest("details");
+    if (details) details.open = true;
+    member?.scrollIntoView({ behavior: "smooth", block: "center" });
     setJumpTo(null);
   }, [tab, jumpTo]);
 
@@ -205,43 +187,16 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             <SummaryView meeting={meeting} onJump={showLine} />
           ) : tab === "transcript" ? (
             <ol className="transcript">
-              {segments.map((s) => {
-                const current = s.start <= time && time < s.end;
-                const also = people.find((p) => p.id === s.alsoHeardId);
-                return (
-                  <li key={s.id} id={`line-${s.id}`} className={current ? "current" : ""} style={whoStyle(people, s.personId)}>
-                    <button className="stamp" aria-label={`Jump to ${formatTime(s.start)}`} onClick={() => { setTime(s.start); setPlaying(false); }}>
-                      {formatTime(s.start)}
-                    </button>
-                    <div className="t-body">
-                      {s.overlap ? (
-                        <span className="overlap"><UsersThreeIcon /> Overlap</span>
-                      ) : (
-                        <div className="t-who">
-                          <SpeakerSelect people={people} disabled={saving === s.id} value={s.personId} unknownLabel={s.speakerLabel} confidence={s.confidence} label={`Speaker of line at ${formatTime(s.start)}`} onChange={(id) => relabel(s.id, id)} />
-                          <NameVoice roomId={meeting.roomId} segment={s} onSaved={(rows) => onChange({ ...meeting, segments: rows.reduce(mergeSegment, segments) })} />
-                          {isCorrected(s) && <span className="edited">Corrected</span>}
-                          {s.matches.length > 0 && (
-                            <button className="link-btn" aria-expanded={open === s.id} onClick={() => setOpen(open === s.id ? null : s.id)}>
-                              Why? <CaretDownIcon className={open === s.id ? "flip" : ""} />
-                            </button>
-                          )}
-                        </div>
-                      )}
-                      <p>{s.text}</p>
-                      {also && (
-                        <span className="also"><WarningCircleIcon /> + {also.name}?</span>
-                      )}
-                      {open === s.id && <WhyPanel segment={s} people={people} />}
-                    </div>
-                  </li>
-                );
-              })}
+              {turns.map((turn) => <TranscriptTurn key={turn.id} turn={turn} people={people} roomId={meeting.roomId} saving={saving}
+                current={turn.segments.some((segment) => segment.start <= time && time < segment.end)}
+                onSeek={(start) => { setTime(start); setPlaying(false); }} onRelabel={(segment, id) => relabel(segment.id, id)}
+                onSaved={(rows) => onChange({ ...meeting, segments: rows.reduce(mergeSegment, segments) })} />)}
             </ol>
           ) : (
             <div className="notes">
               {notes.map((group) => {
-                const said = group.segments;
+                const ids = new Set(group.segments.map((segment) => segment.id));
+                const said = turns.filter((turn) => ids.has(turn.id));
                 return (
                   <article key={group.id}>
                     <h3 style={whoStyle(people, group.personId)}>{group.name}</h3>

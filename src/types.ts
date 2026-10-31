@@ -15,6 +15,9 @@ export interface VoiceMatch {
 }
 
 export interface Segment {
+  track_id?: string | null;
+  stream_id?: string | null;
+  device_id?: string | null;
   speakerLabel?: string;
   unknownId?: string | null;
   confidence?: string;

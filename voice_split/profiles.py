@@ -24,7 +24,7 @@ class ProfileStore:
     def __init__(self, data_dir: Path):
         self.path = Path(data_dir) / "profiles.json"
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.threshold = float(os.getenv("VOICE_SPLIT_MATCH_THRESHOLD", "0.70"))
+        self.threshold = float(os.getenv("VOICE_SPLIT_MATCH_THRESHOLD", "0.30"))
         self.margin = float(os.getenv("VOICE_SPLIT_MATCH_MARGIN", "0.08"))
         if not 0 <= self.threshold <= 1 or not 0 <= self.margin <= 1:
             raise ValueError("Speaker threshold and margin must be between zero and one.")

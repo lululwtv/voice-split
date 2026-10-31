@@ -126,7 +126,7 @@ class CoreRoomStore(RoomStore):
                     and incoming.get("stream_id")
                     and previous.get("stream_id") == incoming["stream_id"]
                     and previous.get("device_id") == incoming.get("device_id")
-                    and -.3 <= incoming["start"] - previous["end"] <= .8
+                    and -.1 <= incoming["start"] - previous["end"] <= .8
                     and incoming["end"] - previous["start"] <= 20):
                 # Retain the weakest evidence for the combined turn, not an inflated score.
                 evidence = min((previous, incoming), key=evidence_strength)

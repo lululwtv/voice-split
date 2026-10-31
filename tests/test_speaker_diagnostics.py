@@ -46,7 +46,8 @@ def test_short_phrase_reports_insufficient_speech_instead_of_silent_unknown(tmp_
     assert rows[0]['identification']['speech_seconds']==pytest.approx(1.08)
 
 
-def test_export_score_is_explained_without_relaxing_rejection(tmp_path):
+def test_export_score_is_explained_without_relaxing_rejection(tmp_path, monkeypatch):
+    monkeypatch.setenv('VOICE_SPLIT_MATCH_THRESHOLD', '.70')
     profiles=ProfileStore(tmp_path)
     profiles.enroll('Edric',np.array([1.,0.]))
     score=.5928929146811268

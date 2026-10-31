@@ -8,6 +8,8 @@ export type EngineEvent =
   | { type: "ended"; duration: number }
   | { type: "status"; delaySeconds: number }
   | { type: "error"; message?: string }
+  | { type: "audio_error"; message: string }
+  | { type: "audio_ready" }
   | { type: "summary"; summary: Summary }
   | { type: "summary_failed" }
   | { type: "participants"; ids: string[] };

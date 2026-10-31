@@ -15,20 +15,14 @@ def identify_turns(engines, profiles, samples, rows, participant_ids, matcher=No
     return _identify_turns(engines, profiles, samples, rows, participant_ids, matcher)
 
 
-def identify_meeting_turns(engines, profiles, samples, rows, participant_ids, session, origin=0):
+def identify_meeting_turns(engines, profiles, samples, rows, participant_ids, session, origin=0, lookahead=None):
+    """`lookahead` rows are decoded but not yet emitted; they only extend forward evidence."""
     return _identify_turns(engines, profiles, samples, rows, participant_ids,
-                           session=session, origin=origin)
+                           session=session, origin=origin, lookahead=lookahead)
 
 
-def _identify_turns(engines, profiles, samples, rows, participant_ids, matcher=None, session=None, origin=0):
-    """Return word-aligned turns with sample-relative timestamps and ranked matches.
-
-    One embedding is shared by all words in each occupied half-second bin.
-    These short local probes remain low-confidence evidence, not overlap detection.
-    Rows lacking word timestamps can only be assigned as an indivisible span.
-    """
+def _words(rows, duration):
     words = []
-    duration = len(samples) / SAMPLE_RATE
     for row in rows:
         for word in row.get("words") or [{"start": row["start"], "end": row["end"],
                                          "word": " " + row.get("text", "")}]:
@@ -38,9 +32,35 @@ def _identify_turns(engines, profiles, samples, rows, participant_ids, matcher=N
             start, end = max(0., start), min(duration, end)
             if end > start and word["word"].strip():
                 words.append({"start": start, "end": end, "word": word["word"]})
+    return sorted(words, key=lambda word: (word["start"], word["end"]))
+
+
+def _forward_speech(words, start):
+    """Spans of the next FORWARD_SECONDS of speech from `start`, skipping silence."""
+    spans, seconds = [], 0.
+    for word in words:
+        if word["end"] <= start:
+            continue
+        spans.append({"start": max(word["start"], start), "end": word["end"]})
+        seconds += spans[-1]["end"] - spans[-1]["start"]
+        if seconds >= FORWARD_SECONDS:
+            break
+    return spans
+
+
+def _identify_turns(engines, profiles, samples, rows, participant_ids, matcher=None, session=None, origin=0,
+                    lookahead=None):
+    """Return word-aligned turns with sample-relative timestamps and ranked matches.
+
+    One embedding is shared by all words in each occupied half-second bin.
+    These short local probes remain low-confidence evidence, not overlap detection.
+    Rows lacking word timestamps can only be assigned as an indivisible span.
+    """
+    duration = len(samples) / SAMPLE_RATE
+    words = _words(rows, duration)
     if not words:
         return []
-    words.sort(key=lambda word: (word["start"], word["end"]))
+    heard = words if lookahead is None else _words(lookahead, duration)
     lower, upper = words[0]["start"], max(word["end"] for word in words)
     centers = {}
     for word in words:
@@ -59,8 +79,7 @@ def _identify_turns(engines, profiles, samples, rows, participant_ids, matcher=N
                 novel = [{**w, "start": max(w["start"], floor)} for w in local]
                 speech = speech_samples(samples, novel)
                 # Probe forward from the first novel word so earlier speakers never enter it.
-                a = max(0., novel[0]["start"])
-                clip = samples[int(a * SAMPLE_RATE):int(min(duration, a + FORWARD_SECONDS) * SAMPLE_RATE)]
+                clip = speech_samples(samples, _forward_speech(heard, novel[0]["start"]))
                 probes[index] = session.observe(clip, speech, origin + local[0]["start"],
                                                 origin + max(w["end"] for w in local), participant_ids)
             else:

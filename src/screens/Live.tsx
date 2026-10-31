@@ -1,13 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
-import { SpeakerSelect, whoStyle, NameVoice } from "../components/people";
+import { whoStyle } from "../components/people";
+import { TranscriptTurn } from "../components/TranscriptTurn";
+import { groupTranscriptTurns } from "../lib/transcriptTurns";
 import type { Engine } from "../engine/types";
 import { correctSpeaker, loadMeeting, mergeSegment, request, roomPath } from "../lib/api";
 import { loadPeople } from "../lib/peopleStore";
 import { liveStatus, type LiveStatus } from "../lib/liveStatus";
 import { canPopOut, openPopOut } from "../lib/popOut";
-import { formatTime, isCorrected } from "../lib/stats";
+import { formatTime } from "../lib/stats";
 import type { Meeting, Person, Segment, Summary, VoiceWindow } from "../types";
 
 const SUMMARY_TIMEOUT_MS = 90_000;
@@ -73,6 +75,7 @@ export function Live(props: {
   const windows = useRef<VoiceWindow[]>([]);
   const duration = useRef(0);
   const feed = useRef<HTMLOListElement>(null);
+  const following = useRef(true);
 
   useEffect(() => {
     popup?.addEventListener("pagehide", () => setPopup(null));
@@ -102,6 +105,13 @@ export function Live(props: {
         case "participants":
           void loadPeople().then((all) => setPeople(all.filter((p) => event.ids.includes(p.id))));
           break;
+        case "audio_error":
+          setMessage(event.message);
+          setLevels({});
+          break;
+        case "audio_ready":
+          setMessage("");
+          break;
         case "error":
           setMessage(event.message ?? "The engine stopped.");
           setEngineLost(true);
@@ -128,8 +138,8 @@ export function Live(props: {
   useTrackEnded(props.tab, () => setTabLost(true));
 
   useEffect(() => {
-    feed.current?.scrollTo({ top: feed.current.scrollHeight, behavior: "smooth" });
-  }, [segments.length]);
+    if (following.current) feed.current?.scrollTo({ top: feed.current.scrollHeight, behavior: "instant" });
+  }, [segments]);
 
   const complete = (finalSummary: Summary | null) => {
     engine.current?.stop();
@@ -248,27 +258,12 @@ export function Live(props: {
           );
         })}
       </ul>
-      <ol className="feed" ref={feed} aria-live="polite">
-        {segments.map((s) => {
-          const person = people.find((p) => p.id === s.personId);
-          return (
-            <li key={s.id} className="line" style={whoStyle(people, s.personId)}>
-              <div className="line-head">
-                {s.overlap ? (
-                  <strong>Overlap</strong>
-                ) : (
-                  <SpeakerSelect people={people} value={s.personId} disabled={saving === s.id} unknownLabel={s.speakerLabel} confidence={s.confidence}
-                    label={`Speaker of line at ${formatTime(s.start)}`}
-                    onChange={(personId) => void relabel(s, personId)} />
-                )}
-                {person && isCorrected(s) && <span className="edited">Corrected</span>}
-                <NameVoice roomId={props.roomId} segment={s} onSaved={(rows) => setSegments((list) => rows.reduce(mergeSegment, list))} />
-                <time>{formatTime(s.start)}</time>
-              </div>
-              <p>{s.text}</p>
-            </li>
-          );
-        })}
+      <ol className="feed" ref={feed} aria-live="polite" onScroll={(event) => {
+        const list = event.currentTarget;
+        following.current = list.scrollHeight - list.scrollTop - list.clientHeight < 80;
+      }}>
+        {groupTranscriptTurns(segments).map((turn) => <TranscriptTurn key={turn.id} turn={turn} people={people} roomId={props.roomId} saving={saving} live
+          onRelabel={relabel} onSaved={(rows) => setSegments((list) => rows.reduce(mergeSegment, list))} />)}
       </ol>
       <footer className="live-foot">
         <button className="link-btn" onClick={refreshParticipants}>Refresh participants</button>

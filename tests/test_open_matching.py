@@ -6,6 +6,27 @@ from voice_split.profiles import ProfileStore
 from voice_split.open_matching import MeetingMatcher
 
 
+@pytest.mark.parametrize("configured", [None, ".45"])
+@pytest.mark.parametrize("seconds", [.25, 2])
+def test_named_threshold_is_shared_by_profiles_meetings_and_voice_test(tmp_path, monkeypatch, configured, seconds):
+    monkeypatch.delenv("VOICE_SPLIT_OPEN_THRESHOLD", raising=False)
+    monkeypatch.delenv("VOICE_SPLIT_MATCH_THRESHOLD", raising=False)
+    if configured is not None:
+        monkeypatch.setenv("VOICE_SPLIT_MATCH_THRESHOLD", configured)
+    store, profiles = CoreRoomStore(tmp_path), ProfileStore(tmp_path)
+    room = store.create("meeting")["id"]
+    alice = profiles.enroll("Alice", np.array([1., 0.]))["id"]
+    matcher = MeetingMatcher(SimpleNamespace(embed=lambda audio: audio[:2]), profiles, store)
+    threshold = float(configured or ".30")
+    for score in (threshold - .01, threshold + .01):
+        vector = np.array([score, np.sqrt(1 - score ** 2)])
+        audio = np.tile(vector, int(8000 * seconds))
+        for result in (profiles.assess(vector), matcher.assess(room, audio, [alice]),
+                       matcher.assess_scores(audio, [alice])):
+            assert result["identification"]["threshold"] == threshold
+            assert result["profile_id"] == (alice if score > threshold else None)
+
+
 def test_unknowns_persist_and_are_scoped_to_meetings(tmp_path):
     store, profiles = CoreRoomStore(tmp_path), ProfileStore(tmp_path)
     room = store.create("first")["id"]
@@ -21,7 +42,8 @@ def test_unknowns_persist_and_are_scoped_to_meetings(tmp_path):
     assert identify([0., 1, 0], other)["speaker"] == "Unknown speaker 1"
 
 
-def test_open_matching_rejects_weak_ambiguous_and_unchecked_voices(tmp_path):
+def test_open_matching_rejects_weak_ambiguous_and_unchecked_voices(tmp_path, monkeypatch):
+    monkeypatch.setenv("VOICE_SPLIT_OPEN_THRESHOLD", ".55")
     store, profiles = CoreRoomStore(tmp_path), ProfileStore(tmp_path)
     room = store.create("meeting")["id"]
     alice = profiles.enroll("Alice", np.array([1., 0., 0.]))["id"]
@@ -53,7 +75,8 @@ def test_model_failure_does_not_create_unknown_identity(tmp_path):
         assert db.execute("SELECT count(*) FROM unknown_voices").fetchone()[0] == 0
 
 
-def test_returning_unknown_beats_borderline_name_but_strong_enrollment_can_resolve_it(tmp_path):
+def test_returning_unknown_beats_borderline_name_but_strong_enrollment_can_resolve_it(tmp_path, monkeypatch):
+    monkeypatch.setenv("VOICE_SPLIT_OPEN_THRESHOLD", ".55")
     store, profiles = CoreRoomStore(tmp_path), ProfileStore(tmp_path)
     room = store.create("meeting")["id"]
     alice = profiles.enroll("Alice", np.array([1., 0.]))["id"]

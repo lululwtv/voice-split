@@ -5,8 +5,8 @@ import numpy as np
 
 from .audio import SAMPLE_RATE
 from .identification import MIN_SPEECH_SECONDS
-from .open_matching import STRONG_MATCH
 from .profiles import _unit
+from .open_matching import STRONG_MATCH
 
 # Forward evidence starts where a probe's words start, so it can challenge the
 # current speaker at the change instead of after a centered window has passed it.
@@ -14,7 +14,13 @@ FORWARD_SECONDS = 1.5
 MIN_PROBE_SECONDS = 1.
 CHANGE_SIMILARITY = .5
 CONFIRM_SIMILARITY = .6
+# Half a second of the same voice usually scores above this against a track's own speech.
+SHORT_SIMILARITY = .4
+# A returning voice must clearly match one earlier track in this stream to reuse its identity.
+RECALL_SIMILARITY = .6
+RECALL_MARGIN = .15
 TRACK_SECONDS = 6
+MAX_VOICES = 16
 
 
 class MeetingStream:
@@ -25,9 +31,12 @@ class MeetingStream:
         self.until = None
         self.resolutions = {}
         self.source_start = None
+        self.voices, self.identity, self.anchored = [], None, 0
         self._start_track()
 
     def _start_track(self, track_id=None, audio=None, forward=None):
+        if self.identity and self.anchored:
+            self.voices = [*self.voices, (self.anchor, self.identity)][-MAX_VOICES:]
         self.track_id = track_id or uuid.uuid4().hex
         self.audio = np.empty(0, dtype=np.float32) if audio is None else audio[-TRACK_SECONDS * SAMPLE_RATE:]
         # Until the track has its own speech, its anchor is the mean of its forward probes.
@@ -41,10 +50,37 @@ class MeetingStream:
         for track in (self.track_id, *self.aliases):
             self.resolutions[track] = identity
 
-    def _belongs_here(self, audio, rival):
-        """Compare a challenger's own words with this track and the rival voice."""
-        own = self._embed(audio) if len(audio) >= .25 * SAMPLE_RATE else None
-        return own is None or float(np.dot(own, self.anchor)) >= float(np.dot(own, rival))
+    def _belongs_here(self, audio, rival=None):
+        """Compare a challenger's own words with this track and the rival voice; None if too short."""
+        own = self._embed(audio) if len(audio) >= .25 * SAMPLE_RATE and self.anchor is not None else None
+        if own is None:
+            return None
+        return float(np.dot(own, self.anchor)) >= (SHORT_SIMILARITY if rival is None else float(np.dot(own, rival)))
+
+    def _settle(self, rival=None):
+        """Resolve an unconfirmed challenger. Without a rival, the challenger's own forward
+        probe already contains this speaker again, so only a clear match joins the track."""
+        if self.challenger and self._belongs_here(self.challenger[1], rival):
+            self._absorb(self.challenger[2], self.challenger[1])
+        self.challenger = None
+
+    def _recall(self, participants):
+        """Reuse the identity of an earlier track in this stream; never mints one."""
+        own = self._embed(self.audio)
+        best = {}
+        for anchor, identity in self.voices if own is not None else ():
+            if identity.get("profile_id") not in (None, *participants):
+                continue
+            key, score = identity.get("profile_id") or identity["unknown_id"], float(np.dot(own, anchor))
+            if score > best.get(key, (-1.,))[0]:
+                best[key] = (score, identity)
+        ranked = sorted(best.values(), key=lambda item: -item[0])
+        if not ranked or ranked[0][0] < RECALL_SIMILARITY or (
+                len(ranked) > 1 and ranked[0][0] - ranked[1][0] < RECALL_MARGIN):
+            return {}
+        score, identity = ranked[0]
+        return {**identity, "identification": {**identity["identification"], "reason": "stream_recall",
+                                               "confidence": "low", "recall_similarity": round(score, 4)}}
 
     def _absorb(self, track, audio):
         """A challenger that proved to be this speaker resolves with this track."""
@@ -84,33 +120,41 @@ class MeetingStream:
                 _, previous, track = self.named_challenger
                 self._start_track(track, previous)
             elif self.identity is None and len(self.audio):
-                combined = self.matcher.assess(self.room_id, np.concatenate([self.audio, speech]), participants)
-                if combined.get("profile_id") != named["profile_id"] or (combined.get("score") or 0) < STRONG_MATCH:
+                earlier = self.matcher.assess(self.room_id, self.audio, participants)
+                if earlier.get("profile_id") != named["profile_id"]:
                     self._start_track()
             self._resolve(named)
+            self.named_challenger = None
+            self._settle()
+            self.audio = np.concatenate([self.audio, speech])[-TRACK_SECONDS * SAMPLE_RATE:]
+            # Direct evidence for these words keeps its own score and confidence.
+            return {**named, "track_id": self.track_id}
         self.named_challenger = None
         # Too little forward audio is weak evidence: it continues the track, never challenges it.
         vector = self._embed(probe) if len(probe) >= MIN_PROBE_SECONDS * SAMPLE_RATE else None
         similarity = float(np.dot(vector, self.anchor)) if vector is not None and self.anchor is not None else None
-        if similarity is not None and similarity < CHANGE_SIMILARITY:
+        # Forward evidence may already contain the next speaker. Keep collecting
+        # this track when the current words still fit it better than that rival.
+        if (similarity is not None and similarity < CHANGE_SIMILARITY
+                and not self._belongs_here(speech, vector)):
             # A single distant observation is uncertainty, not a new identity.
             if self.challenger is None or float(np.dot(vector, self.challenger[0])) < CONFIRM_SIMILARITY:
-                if self.challenger and self._belongs_here(self.challenger[1], self.challenger[0]):
-                    self._absorb(self.challenger[2], self.challenger[1])
+                self._settle(vector)
                 track = uuid.uuid4().hex
                 self.challenger = (vector, speech.copy(), track)
                 return self._pending("speaker_change_pending", len(speech) / SAMPLE_RATE, track)
             previous, audio, track = self.challenger
-            # A forward probe can reach past this speaker's last words into the next voice.
-            if self._belongs_here(audio, vector):
+            # A forward probe can reach past this speaker's last words into the next voice;
+            # words too short to compare stay unassigned rather than join either speaker.
+            belongs = self._belongs_here(audio, vector)
+            if belongs:
                 self._absorb(track, audio)
-                self._start_track(None, speech, previous + vector)
-            else:
+            if belongs is False:
                 self._start_track(track, np.concatenate([audio, speech]), previous + vector)
+            else:
+                self._start_track(None, speech, previous + vector)
         else:
-            if self.challenger and self._belongs_here(self.challenger[1], self.challenger[0]):
-                self._absorb(self.challenger[2], self.challenger[1])
-            self.challenger = None
+            self._settle()
             self.audio = np.concatenate([self.audio, speech])[-TRACK_SECONDS * SAMPLE_RATE:]
             if vector is not None and not self.anchored:
                 self.forward = vector if self.forward is None else self.forward + vector
@@ -122,9 +166,10 @@ class MeetingStream:
                 self.anchor, self.anchored = own, len(self.audio)
         seconds = len(self.audio) / SAMPLE_RATE
         if self.identity is None:
-            if seconds >= MIN_SPEECH_SECONDS:
+            match = self._recall(participants) if self.voices and seconds >= 1 else {}
+            if not match and seconds >= MIN_SPEECH_SECONDS:
                 match = self.matcher.identify_stream(self.room_id, self.audio, participants)
-            else:
+            elif not match:
                 match = self.matcher.assess(self.room_id, probe, participants)
                 if not match.get("profile_id") or (match.get("score") or 0) < STRONG_MATCH:
                     match = {}

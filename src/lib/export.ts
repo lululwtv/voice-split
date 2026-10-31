@@ -1,5 +1,6 @@
 import type { Meeting, Segment } from "../types";
 import { formatTime, speakerNotes } from "./stats";
+import { groupTranscriptTurns } from "./transcriptTurns";
 
 function speakerName(meeting: Meeting, segment: Segment) {
   if (segment.overlap) return "Overlapping speech";
@@ -28,13 +29,15 @@ export function toMarkdown(meeting: Meeting) {
   if (meeting.isSample) out.push("> Sample meeting with simulated results.", "");
   if (meeting.summary) out.push(summaryToMarkdown(meeting));
   out.push("## Transcript", "");
-  for (const s of meeting.segments) {
-    out.push(`**${speakerName(meeting, s)}** [${formatTime(s.start)}]: ${s.text}`, "");
+  const turns = groupTranscriptTurns(meeting.segments);
+  for (const turn of turns) {
+    out.push(`**${speakerName(meeting, turn.segments[0])}** [${formatTime(turn.start)}]: ${turn.text}`, "");
   }
   out.push("## Notes by speaker", "");
   for (const group of speakerNotes(meeting.people, meeting.segments)) {
     if (!group.segments.length) continue;
-    out.push(`### ${group.name}`, "", ...group.segments.map((s) => `- [${formatTime(s.start)}] ${s.text}`), "");
+    const ids = new Set(group.segments.map((segment) => segment.id));
+    out.push(`### ${group.name}`, "", ...turns.filter((turn) => ids.has(turn.id)).map((turn) => `- [${formatTime(turn.start)}] ${turn.text}`), "");
   }
   return out.join("\n");
 }

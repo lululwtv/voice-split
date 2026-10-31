@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { MoonIcon, SunIcon } from "@phosphor-icons/react";
 import { createLocalEngine, useEngineHealth, type EngineStatus } from "./engine";
 import { audioErrorMessage, requestMeetingTab, requestMic, stopStream, toWav } from "./lib/audio";
 import { loadMeeting, request, roomPath } from "./lib/api";
 import { loadPeople } from "./lib/peopleStore";
+import { useTheme } from "./lib/theme";
 import type { Meeting, Person } from "./types";
 import { Attendees } from "./screens/Attendees";
 import { Connect } from "./screens/Connect";
@@ -14,6 +16,7 @@ import { Review } from "./screens/Review";
 type Screen = "home" | "attendees" | "connect" | "live" | "review" | "how";
 type Room = { id: string; title: string };
 export function App() {
+  const { theme, toggle: toggleTheme } = useTheme();
   const [screen, setScreen] = useState<Screen>("home");
   const [meeting, setMeeting] = useState<Meeting | null>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -106,6 +109,14 @@ export function App() {
           <button className={["home","attendees","connect"].includes(screen) ? "active" : ""} onClick={() => go("home")}>Meetings</button>
           {meeting && <button className={screen === "review" ? "active" : ""} onClick={() => go("review")}>Last</button>}
           <button className={screen === "how" ? "active" : ""} onClick={() => go("how")}>How</button>
+          <button
+            className="icon-btn theme-toggle"
+            aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            title={theme === "dark" ? "Light mode" : "Dark mode"}
+            onClick={toggleTheme}
+          >
+            {theme === "dark" ? <SunIcon size={18} /> : <MoonIcon size={18} />}
+          </button>
         </nav>
       </header>}
       {error && <p className="notice warn app-message" role="alert">{error}</p>}

@@ -23,6 +23,7 @@ from .streaming import recognize_window_ranked
 from .core_rooms import CoreRoomStore, ConflictError
 from .open_matching import MeetingMatcher
 from .meeting_stream import MeetingStream
+from .transcript import transcript_turns
 
 VERSION = "0.3.0"
 ROOT = Path(__file__).resolve().parent.parent
@@ -117,7 +118,9 @@ def recognize(samples, start=0):
 @app.get("/api/status")
 def status():
     return {"ready": not loading and not load_error and engines.status().get("ready", False),
-            "loading": loading, "error": load_error, "engines": engines.status(), "version": VERSION}
+            "loading": loading, "error": load_error, "engines": engines.status(), "version": VERSION,
+            "speaker_matching": {"profile_threshold": profiles.threshold,
+                                 "meeting_threshold": meeting_matcher.threshold}}
 
 
 @app.get("/api/profiles")
@@ -315,7 +318,7 @@ def export_meeting(room_id: str, format: str = "json"):
             value = max(0, int(seconds))
             return f"{value // 60:02d}:{value % 60:02d}"
         lines = [room["title"]]
-        for row in segments:
+        for row in transcript_turns(segments):
             lines.append(f"[{timestamp(row.get('start', 0))} – {timestamp(row.get('end', 0))}] "
                          f"{row.get('speaker', 'Unknown')}\n{row['text']}")
         return PlainTextResponse("\n\n".join(lines))

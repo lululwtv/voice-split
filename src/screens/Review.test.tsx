@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SpeakerSelect } from "../components/people";
+import { TranscriptTurn } from "../components/TranscriptTurn";
 import { correctSpeaker, loadMeeting } from "../lib/api";
 import type { Meeting, Segment } from "../types";
 import { Review } from "./Review";
@@ -32,6 +33,7 @@ function selectIn(node: unknown): { onChange: (id: string) => Promise<void> } | 
   if (!node || typeof node !== "object" || !("props" in node)) return;
   const element = node as { type: unknown; props: { children?: unknown } };
   if (element.type === SpeakerSelect) return element.props as unknown as { onChange: (id: string) => Promise<void> };
+  if (element.type === TranscriptTurn) return selectIn(TranscriptTurn(element.props as unknown as Parameters<typeof TranscriptTurn>[0]));
   return selectIn(element.props.children);
 }
 function render(roomId: string, onChange: (meeting: Meeting) => void) {

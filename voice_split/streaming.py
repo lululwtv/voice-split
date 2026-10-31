@@ -21,7 +21,8 @@ def recognize_window_ranked(engines, profiles, state, samples, start, final=Fals
     stable = []
     emitted_until = state.emitted_until
     last_word = getattr(state, "last_word", None)
-    for row in engines.transcribe(audio):
+    decoded = engines.transcribe(audio)
+    for row in decoded:
         # A word mostly before the emitted boundary is a re-decode, even if spelled differently.
         words = [word for word in row.get("words", [])
                  if origin + word["end"] > emitted_until + .02
@@ -33,7 +34,7 @@ def recognize_window_ranked(engines, profiles, state, samples, start, final=Fals
             stable.append({**row, "words": words})
             emitted_until = max(emitted_until, origin + words[-1]["end"])
             last_word = words[-1]["word"].casefold().strip(" .,!?;:\"'")
-    turns = (identify_meeting_turns(engines, profiles, audio, stable, participant_ids, session, origin)
+    turns = (identify_meeting_turns(engines, profiles, audio, stable, participant_ids, session, origin, decoded)
              if session else identify_turns(engines, profiles, audio, stable, participant_ids, matcher))
     output = [{**turn, "id": uuid.uuid4().hex, "revision": 0,
                "start": max(0, origin + turn["start"]), "end": origin + turn["end"]}

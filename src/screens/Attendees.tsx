@@ -24,7 +24,7 @@ export function Attendees(props: { roomId?: string; startEnrollment?: boolean; o
   const toggle = (id: string) => setSelected((current) => { const next = new Set(current); if (!next.delete(id)) next.add(id); return next; });
   const add = async (person: Person) => {
     const saved = await savePerson(person, replacing?.id);
-    setPeople((list) => replacing ? list.map((p) => p.id === saved.id ? saved : p) : [...list, saved]);
+    setPeople((list) => [...new Map([...list, saved].map((p) => [p.id, p])).values()]);
     setAdding(false); setReplacing(null);
   };
   const remove = async (id: string) => {
@@ -32,18 +32,18 @@ export function Attendees(props: { roomId?: string; startEnrollment?: boolean; o
     try { await removePerson(id); setPeople((list) => list.filter((p) => p.id !== id)); setSelected((current) => { const next = new Set(current); next.delete(id); return next; }); }
     catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
-  const chosen = people.filter((p) => selected.has(p.id));
+  const chosen = [...new Map(people.filter((p) => selected.has(p.id)).map((p) => [p.id, p])).values()];
   return <main className="page narrow-page">
     <Steps current={0} /><h1 className="step-title">Who's here?</h1>
     <p className="lead">Select the saved voices attending this meeting. Unmatched speakers stay unnamed.</p>
     <section className="panel attendee-panel">
       {people.length > 0 && <ul className="attendees">{people.map((p) => <li key={p.id}>
         <label><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} /><span className="tick" aria-hidden><CheckIcon weight="bold" /></span><strong>{p.name}</strong></label>
-        <button className="btn" disabled={busy} onClick={() => { setTesting(false); setReplacing(p); setAdding(true); }}>Re-record</button>
-        <button className="icon-btn" disabled={busy} aria-label={`Delete ${p.name}'s voice`} onClick={() => remove(p.id)}><TrashIcon /></button>
+        <button className="btn" disabled={busy || adding} onClick={() => { setTesting(false); setReplacing(p); setAdding(true); }}>Re-record</button>
+        <button className="icon-btn" disabled={busy || adding} aria-label={`Delete ${p.name}'s voice`} onClick={() => remove(p.id)}><TrashIcon /></button>
       </li>)}</ul>}
       {error && <p className="error" role="alert">{error}</p>}
-      {loaded && !testing && <button className="btn" disabled={busy} onClick={() => { setAdding(false); setReplacing(null); setTesting(true); }}>Test voice</button>}
+      {loaded && !testing && <button className="btn" disabled={busy || adding} onClick={() => { setAdding(false); setReplacing(null); setTesting(true); }}>Test voice</button>}
       {testing ? <TestVoice hasProfiles={people.length > 0} onCancel={() => setTesting(false)} /> : adding ? <Enroll key={replacing?.id ?? "new"} initialPerson={replacing ?? undefined} onAdd={add} onCancel={() => { setAdding(false); setReplacing(null); }} /> :
         loaded && <button className="btn" onClick={() => setAdding(true)}><PlusIcon /> Add saved voice</button>}
     </section>
