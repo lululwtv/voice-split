@@ -278,6 +278,7 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .scene-art { position: relative; }
 .scene-art svg { display: block; width: 100%; height: auto; }
 .art-room { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
+.art-other-room { fill: var(--raise); fill-opacity: .55; stroke: var(--control-line); stroke-width: 1.5; }
 .art-table { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
 .art-solid { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
 .art-stroke { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }
@@ -290,12 +291,12 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .bubble p > span { grid-area: 1 / 1; }
 .bubble-space { visibility: hidden; }
 .caret { display: inline-block; width: 1.5px; height: 1em; margin-left: 1px; background: var(--who); vertical-align: -2px; animation: pulse .9s infinite; }
-.room .bubble { width: 21%; top: 4%; }
+.room .bubble { width: 20%; top: 4%; }
 .room .bubble::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 11px; height: 11px; margin-left: -6px; background: var(--surface); border-right: 1.5px solid var(--who); border-bottom: 1.5px solid var(--who); transform: rotate(45deg); }
 .at-1 { left: 2%; }
-.at-2 { left: 26%; }
-.at-3 { left: 50.5%; }
-.at-4 { left: 75%; }
+.at-2 { left: 24%; }
+.at-3 { left: 46%; }
+.at-4 { left: 76.5%; }
 .mock-card { position: relative; display: grid; gap: 11px; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .mock-card strong { display: block; font-family: var(--mono); font-size: .72rem; font-weight: 500; }
 .mock-head { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }

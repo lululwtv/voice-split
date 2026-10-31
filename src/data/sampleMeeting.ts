@@ -4,7 +4,7 @@ export const samplePeople: Person[] = [
   { id: "edric", name: "Edric", role: "room" },
   { id: "dowon", name: "Dowon", role: "room" },
   { id: "weiming", name: "Wei Ming", role: "room" },
-  { id: "youngjin", name: "Youngjin", role: "room" },
+  { id: "youngjin", name: "Youngjin", role: "online" },
 ];
 
 type Line = [

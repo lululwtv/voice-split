@@ -43,14 +43,17 @@ function Room() {
       <TypingBubble className="at-2" who="Dowon" text="If the tests pass." color={DOWON} delayMs={1100} />
       <TypingBubble className="at-3" who="Wei Ming" text="I'll own the API migration." color={WEI_MING} delayMs={2000} />
       <TypingBubble className="at-4" who="Youngjin" text="I'll send the notes." color={YOUNGJIN} delayMs={3200} />
-      <svg viewBox="0 0 560 330" role="img" aria-label="Edric, Dowon, Wei Ming and Youngjin talk around one table in the same meeting room.">
-        <rect x="1" y="1" width="558" height="328" rx="20" className="art-room" />
-        <ellipse cx="280" cy="232" rx="250" ry="50" className="art-table" />
-        <circle data-thread="voice" cx="70" cy="125" r="15" fill={EDRIC} />
-        <circle data-thread="voice" cx="204" cy="125" r="15" fill={DOWON} />
-        <circle data-thread="voice" cx="342" cy="125" r="15" fill={WEI_MING} />
-        <circle data-thread="voice" cx="479" cy="125" r="15" fill={YOUNGJIN} />
+      <svg viewBox="0 0 560 330" role="img" aria-label="Edric, Dowon and Wei Ming share a meeting room. Youngjin is next door, in a separate room with their own desk.">
+        <rect x="414" y="1" width="145" height="328" rx="20" className="art-other-room" />
+        <rect x="1" y="1" width="413" height="328" rx="20" className="art-room" />
+        <ellipse cx="205" cy="232" rx="180" ry="48" className="art-table" />
+        <rect x="442" y="205" width="88" height="46" rx="6" className="art-table" />
+        <circle data-thread="voice" cx="67" cy="125" r="15" fill={EDRIC} />
+        <circle data-thread="voice" cx="190" cy="125" r="15" fill={DOWON} />
+        <circle data-thread="voice" cx="314" cy="125" r="15" fill={WEI_MING} />
+        <circle data-thread="voice" cx="484" cy="125" r="15" fill={YOUNGJIN} />
         <text x="24" y="312" className="art-text muted-text">Meeting room</text>
+        <text x="436" y="312" className="art-text muted-text">Another room</text>
       </svg>
     </div>
   );
@@ -83,7 +86,7 @@ function FlatTranscript() {
         <strong className="flat">Speaker 1</strong> I'll own the API migration.
         <span className="who-said"><QuestionIcon weight="bold" /> Who said this?</span>
       </p>
-      <p><strong className="flat">Speaker 1</strong> I'll send the notes.</p>
+      <p><strong style={{ color: YOUNGJIN }}>Youngjin</strong> I'll send the notes.</p>
     </div>
   );
 }
@@ -118,15 +121,15 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <Thread root={root} />
 
       <section className="scene">
-        <p className="caption">Four people. One room.</p>
+        <p className="caption">Three in one room. One in another.</p>
         <Room />
       </section>
       <section className="scene">
-        <p className="caption">Every voice goes into one laptop. Four voices, one channel.</p>
+        <p className="caption">Every voice lands on one laptop. One line comes out.</p>
         <SharedMic />
       </section>
       <section className="scene">
-        <p className="caption">Your notetaker hears one speaker. Who owns the action item?</p>
+        <p className="caption">Your notetaker hears one speaker in the room. Who owns the action item?</p>
         <FlatTranscript />
       </section>
       <section className="scene" data-thread="split-scene">
