@@ -3,6 +3,8 @@ import { HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit";
 
 const GUTTER = 56;
 const CORNER = 16;
+const BEND = 90;
+const INPUT_SPREAD = 14;
 const NARROW_RAIL = 14;
 const WIDE_ENOUGH = 1000;
 const SAMPLE_EVERY = 16;
@@ -22,12 +24,13 @@ function buildPaths(root: HTMLElement) {
     const r = el.getBoundingClientRect();
     return { left: r.left - box.left, right: r.right - box.left, top: r.top - box.top, bottom: r.bottom - box.top };
   };
-  const start = root.querySelector('[data-thread="start"]');
+  const laptop = root.querySelector('[data-thread="laptop"]');
+  const voices = [...root.querySelectorAll('[data-thread="voice"]')];
   const story = root.querySelector('[data-thread="split-scene"]');
   const hero = root.querySelector('[data-thread="hero"]');
   const end = root.querySelector('[data-thread="end"]');
   const sections = [...root.querySelectorAll('[data-thread="section"]')];
-  if (!start || !story || !hero || !end || !sections.length) return null;
+  if (!laptop || voices.length !== COLORS.length || !story || !hero || !end || !sections.length) return null;
 
   const wide = box.width >= WIDE_ENOUGH;
   const heroBox = rel(hero);
@@ -36,14 +39,23 @@ function buildPaths(root: HTMLElement) {
   const left = wide ? heroBox.left - GUTTER : NARROW_RAIL;
   const right = wide ? heroBox.right + GUTTER : NARROW_RAIL;
 
-  // One grey line: out of the shared mic, down through the story, into the mixed signal.
-  const s = rel(start);
-  const startX = wide ? (s.left + s.right) / 2 : NARROW_RAIL;
+  // Each person's voice runs from where they sit into the one laptop.
+  const mic = rel(laptop);
+  const startX = (mic.left + mic.right) / 2;
+  const inputs = voices.map((voice, i) => {
+    const v = rel(voice);
+    const x = (v.left + v.right) / 2;
+    const landing = startX + (i - (voices.length - 1) / 2) * INPUT_SPREAD;
+    const bend = mic.top - BEND;
+    return `M${x} ${v.bottom} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
+  });
+
+  // One grey line: out of the laptop, down through the story, into the mixed signal.
   const sceneTop = rel(story).top;
   const gapY = sceneTop - 44;
   const heroMid = heroY(HERO_MID);
   const grey = [
-    `M${startX} ${s.bottom}`,
+    `M${startX} ${mic.bottom}`,
     `L${startX} ${gapY - 70}`,
     `C${startX} ${gapY} ${left} ${gapY} ${left} ${gapY + 70}`,
     `L${left} ${heroMid - 60}`,
@@ -83,7 +95,7 @@ function buildPaths(root: HTMLElement) {
     return d.join(" ");
   });
 
-  return { grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
+  return { inputs, grey, strands, height: rel(root.lastElementChild!).bottom + 24 };
 }
 
 function measure(path: SVGPathElement): Run {
@@ -112,8 +124,8 @@ function drawnLength(run: Run, head: number) {
 }
 
 /**
- * The line that carries the pitch: a single grey voice that splits into four at the hero,
- * then runs through every section. A faint copy is always visible; scrolling draws the bright one.
+ * The line that carries the pitch: four voices enter one laptop, become one grey line,
+ * split back into four at the hero, then run through every section. A faint copy is always visible; scrolling draws the bright one.
  */
 export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
   const svg = useRef<SVGSVGElement>(null);
@@ -145,7 +157,7 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
       const built = buildPaths(host);
       if (!built) return;
       canvas.setAttribute("height", String(built.height));
-      const all = [built.grey, ...built.strands];
+      const all = [...built.inputs, built.grey, ...built.strands];
       runs = all.map((d, i) => {
         const group = canvas.children[i] as SVGGElement;
         const [track, bright] = [group.children[0], group.children[1]] as SVGPathElement[];
@@ -177,7 +189,7 @@ export function Thread({ root }: { root: RefObject<HTMLElement | null> }) {
 
   return (
     <svg ref={svg} className="thread" aria-hidden width="100%">
-      {["var(--unknown)", ...COLORS].map((color, i) => (
+      {[...COLORS, "var(--unknown)", ...COLORS].map((color, i) => (
         <g key={i}>
           <path className="thread-track" stroke={color} />
           <path className="thread-bright" stroke={color} />

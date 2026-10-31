@@ -4,7 +4,7 @@ export const samplePeople: Person[] = [
   { id: "edric", name: "Edric", role: "room" },
   { id: "dowon", name: "Dowon", role: "room" },
   { id: "weiming", name: "Wei Ming", role: "room" },
-  { id: "youngjin", name: "Youngjin", role: "online" },
+  { id: "youngjin", name: "Youngjin", role: "room" },
 ];
 
 type Line = [
@@ -16,8 +16,8 @@ type Line = [
 
 // heardAs is what the simulated engine labels the line, so the sample includes mistakes to correct.
 const lines: Line[] = [
-  [5, "edric", "Okay, let's start. Youngjin, can you hear the room all right?"],
-  [3, "youngjin", "Yep, loud and clear. Go ahead."],
+  [5, "edric", "Okay, let's start. Youngjin, are you ready?"],
+  [3, "youngjin", "Yep. Go ahead."],
   [6, "edric", "Great. Two things today: the launch date and who owns the onboarding emails."],
   [7, "dowon", "On the date, engineering can be ready by the fourteenth if the payment fix lands this week."],
   [6, "weiming", "The fourteenth clashes with the partner webinar, so I'd rather move to the sixteenth.", { alsoHeard: "edric" }],

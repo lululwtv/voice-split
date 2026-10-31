@@ -42,20 +42,15 @@ function Room() {
       <TypingBubble className="at-1" who="Edric" text="Can we ship by Friday?" color={EDRIC} />
       <TypingBubble className="at-2" who="Dowon" text="If the tests pass." color={DOWON} delayMs={1100} />
       <TypingBubble className="at-3" who="Wei Ming" text="I'll own the API migration." color={WEI_MING} delayMs={2000} />
-      <svg viewBox="0 0 560 360" role="img" aria-label="Three people around a table share one laptop. Youngjin joins from home.">
-        <ellipse cx="280" cy="210" rx="210" ry="62" className="art-line" />
-        <circle cx="130" cy="122" r="17" fill={EDRIC} />
-        <circle cx="280" cy="108" r="17" fill={DOWON} />
-        <circle cx="430" cy="122" r="17" fill={WEI_MING} />
-        <rect x="244" y="182" width="72" height="44" rx="4" className="art-solid" />
-        <path d="M232 232 H328" className="art-stroke" />
-        <text x="280" y="210" textAnchor="middle" className="art-text">1 mic</text>
-        <rect data-thread="start" x="279" y="232" width="2" height="2" fill="none" />
-        <path d="M405 278 V356" className="art-dash" />
-        <rect x="425" y="288" width="125" height="66" rx="6" className="art-line" />
-        <circle cx="448" cy="321" r="11" fill={YOUNGJIN} />
-        <text x="465" y="318" className="art-text">Youngjin</text>
-        <text x="465" y="336" className="art-text muted-text">home</text>
+      <TypingBubble className="at-4" who="Youngjin" text="I'll send the notes." color={YOUNGJIN} delayMs={3200} />
+      <svg viewBox="0 0 560 330" role="img" aria-label="Edric, Dowon, Wei Ming and Youngjin talk around one table in the same meeting room.">
+        <rect x="1" y="1" width="558" height="328" rx="20" className="art-room" />
+        <ellipse cx="280" cy="232" rx="250" ry="50" className="art-table" />
+        <circle data-thread="voice" cx="70" cy="125" r="15" fill={EDRIC} />
+        <circle data-thread="voice" cx="204" cy="125" r="15" fill={DOWON} />
+        <circle data-thread="voice" cx="342" cy="125" r="15" fill={WEI_MING} />
+        <circle data-thread="voice" cx="479" cy="125" r="15" fill={YOUNGJIN} />
+        <text x="24" y="312" className="art-text muted-text">Meeting room</text>
       </svg>
     </div>
   );
@@ -65,17 +60,13 @@ function SharedMic() {
   const bars = Array.from({ length: 30 }, (_, i) => 8 + 42 * Math.abs(Math.sin(i * 1.7) * Math.cos(i * 0.43)));
   return (
     <div className="scene-art merge">
-      <TypingBubble className="to-1" who="Edric" text="Can we ship by Friday?" color={EDRIC} />
-      <TypingBubble className="to-2" who="Dowon" text="If the tests pass." color={DOWON} delayMs={200} />
-      <TypingBubble className="to-3" who="Wei Ming" text="I'll own the API migration." color={WEI_MING} delayMs={400} />
-      <TypingBubble className="to-4" who="Youngjin" text="I can hear you." color={YOUNGJIN} delayMs={900} />
-      <svg viewBox="0 0 560 340" role="img" aria-label="Three voices merge into one grey signal. Youngjin's voice stays on its own line.">
-        <path d="M63 62 C63 170 280 130 280 215" stroke={EDRIC} className="art-flow" />
-        <path d="M208 62 C208 160 280 140 280 215" stroke={DOWON} className="art-flow" />
-        <path d="M354 62 C354 160 280 140 280 215" stroke={WEI_MING} className="art-flow" />
-        <path d="M500 62 V340" stroke={YOUNGJIN} className="art-flow" />
+      <svg viewBox="0 0 560 300" role="img" aria-label="Four colored voices enter one laptop and come out as one grey signal.">
+        <rect x="200" y="40" width="160" height="104" rx="8" className="art-solid" />
+        <path d="M172 152 H388" className="art-stroke" />
+        <text x="280" y="98" textAnchor="middle" className="art-text">1 mic</text>
+        <rect data-thread="laptop" x="200" y="40" width="160" height="112" fill="none" />
         {bars.map((h, i) => (
-          <rect key={i} x={165 + i * 8} y={255 - h / 2} width="4" height={h} rx="2" className="art-bar" />
+          <rect key={i} x={165 + i * 8} y={235 - h / 2} width="4" height={h} rx="2" className="art-bar" />
         ))}
       </svg>
     </div>
@@ -92,7 +83,7 @@ function FlatTranscript() {
         <strong className="flat">Speaker 1</strong> I'll own the API migration.
         <span className="who-said"><QuestionIcon weight="bold" /> Who said this?</span>
       </p>
-      <p><strong style={{ color: YOUNGJIN }}>Youngjin</strong> I can hear you.</p>
+      <p><strong className="flat">Speaker 1</strong> I'll send the notes.</p>
     </div>
   );
 }
@@ -106,7 +97,7 @@ function FixedTranscript() {
         <strong style={{ color: WEI_MING }}>Wei Ming</strong> I'll own the API migration.
         <span className="who-said solved"><CheckCircleIcon weight="fill" /></span>
       </p>
-      <p><strong style={{ color: YOUNGJIN }}>Youngjin</strong> I can hear you.</p>
+      <p><strong style={{ color: YOUNGJIN }}>Youngjin</strong> I'll send the notes.</p>
     </div>
   );
 }
@@ -127,15 +118,15 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <Thread root={root} />
 
       <section className="scene">
-        <p className="caption">Three in the room. One on the mic. One joining from home.</p>
+        <p className="caption">Four people. One room.</p>
         <Room />
       </section>
       <section className="scene">
-        <p className="caption">The room shares one microphone. Three voices, one channel.</p>
+        <p className="caption">Every voice goes into one laptop. Four voices, one channel.</p>
         <SharedMic />
       </section>
       <section className="scene">
-        <p className="caption">Your notetaker hears one speaker in the room. Who owns the action item?</p>
+        <p className="caption">Your notetaker hears one speaker. Who owns the action item?</p>
         <FlatTranscript />
       </section>
       <section className="scene" data-thread="split-scene">
