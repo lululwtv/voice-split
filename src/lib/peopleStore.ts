@@ -3,7 +3,7 @@ import type { Person } from "../types";
 // People stay in this browser's IndexedDB so enrollment only happens once.
 function open(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const request = indexedDB.open("voicesplit", 1);
+    const request = indexedDB.open("timbre", 1);
     request.onupgradeneeded = () => request.result.createObjectStore("people", { keyPath: "id" });
     request.onsuccess = () => resolve(request.result);
     request.onerror = () => reject(request.error);

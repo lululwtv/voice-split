@@ -27,15 +27,15 @@ const steps = [
     icon: TagIcon,
     title: "Put a name on each line",
     short: "Most time in the line wins",
-    body: "For every line, VoiceSplit checks which person holds the most slices in that time span. That person gets the label.",
+    body: "For every line, Timbre checks which person holds the most slices in that time span. That person gets the label.",
     limit: "When two people share a line, only one name shows. We flag those lines instead of hiding them.",
   },
   {
     icon: ListChecksIcon,
     title: "Hand you the notes",
-    short: "A transcript and per-person notes",
-    body: "You get the transcript in order and each person's lines grouped, as Markdown and JSON. You can correct any label.",
-    limit: "This version groups what people said. It doesn't write summaries or action items yet.",
+    short: "A summary, transcript and notes",
+    body: "When the meeting ends, a model reads the labelled transcript and writes the decisions and action items. You also get the full transcript and each person's lines, as Markdown and JSON.",
+    limit: "A summary is a draft from an AI model, so it can get things wrong. Each point links to the lines it came from so you can check.",
   },
 ];
 
@@ -46,7 +46,7 @@ export function HowItWorks() {
     <main className="page how">
       <h1>How it knows who's talking</h1>
       <p className="lead">
-        Paid meeting tools keep this step closed, at around $10 to $30 per user each month. VoiceSplit rebuilds it from open parts you can inspect, and it costs nothing to run.
+        Paid meeting tools keep this step closed, at around $10 to $30 per user each month. Timbre rebuilds it from open parts you can inspect, and it costs nothing to run.
       </p>
       <ol className="journey">
         {steps.map((s, i) => (

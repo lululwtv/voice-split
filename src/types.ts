@@ -37,6 +37,24 @@ export interface VoiceWindow {
   personId: string;
 }
 
+/** One claim in the summary, tied to the transcript lines it came from. */
+export interface SummaryItem {
+  text: string;
+  sources: string[];
+}
+
+export interface ActionItem extends SummaryItem {
+  ownerId: string | null;
+  due?: string;
+}
+
+export interface Summary {
+  overview: string;
+  decisions: SummaryItem[];
+  actions: ActionItem[];
+  questions: SummaryItem[];
+}
+
 export interface Meeting {
   title: string;
   isSample: boolean;
@@ -44,4 +62,8 @@ export interface Meeting {
   segments: Segment[];
   windows: VoiceWindow[];
   duration: number;
+  /** null when the summary couldn't be written. */
+  summary: Summary | null;
+  /** A label changed after the summary was written, so its names may be out of date. */
+  relabelledSinceSummary?: boolean;
 }

@@ -1,4 +1,4 @@
-import type { Person, Segment, VoiceWindow } from "../types";
+import type { Person, Segment, Summary, VoiceWindow } from "../types";
 
 export const samplePeople: Person[] = [
   { id: "maya", name: "Maya", role: "room" },
@@ -71,3 +71,19 @@ export function buildSampleMeeting() {
   });
   return { people: samplePeople, segments, windows, duration: t };
 }
+
+export const sampleSummary: Summary = {
+  overview:
+    "The team moved the launch to the sixteenth to avoid the partner webinar and made Priya the owner of the onboarding emails.",
+  decisions: [
+    { text: "Launch on the sixteenth instead of the fourteenth.", sources: ["s5", "s8", "s15"] },
+    { text: "Priya owns the onboarding email copy.", sources: ["s11", "s15"] },
+  ],
+  actions: [
+    { text: "Tell the partner team about the new date", ownerId: "priya", sources: ["s9"] },
+    { text: "Send the final screenshots", ownerId: "weijie", due: "Monday", sources: ["s12"] },
+    { text: "Send Alex a draft of the emails", ownerId: "priya", due: "Wednesday", sources: ["s14"] },
+    { text: "Review the emails before they go out", ownerId: "alex", sources: ["s13"] },
+  ],
+  questions: [{ text: "Will the payment fix land this week? Readiness depended on it.", sources: ["s4"] }],
+};

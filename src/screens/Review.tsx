@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { Avatar, colorOf, SpeakerSelect } from "../components/people";
+import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
 import { formatTime, labelAccuracy, talkTime } from "../lib/stats";
 import type { Meeting, Person, Segment } from "../types";
@@ -73,7 +74,8 @@ function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
 }
 
 export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: Meeting) => void }) {
-  const [tab, setTab] = useState<"transcript" | "notes">("transcript");
+  const [tab, setTab] = useState<"summary" | "transcript" | "notes">("summary");
+  const [jumpTo, setJumpTo] = useState<string | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
@@ -93,11 +95,29 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
     return () => clearInterval(timer);
   }, [playing, duration]);
 
+  useEffect(() => {
+    if (tab !== "transcript" || !jumpTo) return;
+    document.getElementById(`line-${jumpTo}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+    setJumpTo(null);
+  }, [tab, jumpTo]);
+
+  const showLine = (id: string) => {
+    const line = segments.find((s) => s.id === id);
+    if (line) setTime(line.start);
+    setPlaying(false);
+    setTab("transcript");
+    setJumpTo(id);
+  };
+
   const accuracy = labelAccuracy(segments);
   const talk = talkTime(people, windows);
   const longest = Math.max(1, ...talk.map((t) => t.seconds));
   const relabel = (id: string, personId: string | null) =>
-    onChange({ ...meeting, segments: segments.map((s) => (s.id === id ? { ...s, personId } : s)) });
+    onChange({
+      ...meeting,
+      relabelledSinceSummary: !!meeting.summary,
+      segments: segments.map((s) => (s.id === id ? { ...s, personId } : s)),
+    });
   const fileBase = meeting.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   if (segments.length === 0) {
@@ -128,7 +148,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
 
       {meeting.isSample && (
         <p className="sample-banner">
-          Sample meeting. The names, scores and mistakes below are scripted to show how review works. They aren't real results.
+          Sample meeting. The summary, names, scores and mistakes below are scripted to show how review works. They aren't real results.
         </p>
       )}
 
@@ -149,17 +169,20 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
       <div className="review-grid">
         <section className="panel">
           <div className="tabs" role="tablist">
+            <button role="tab" aria-selected={tab === "summary"} onClick={() => setTab("summary")}>Summary</button>
             <button role="tab" aria-selected={tab === "transcript"} onClick={() => setTab("transcript")}>Transcript</button>
             <button role="tab" aria-selected={tab === "notes"} onClick={() => setTab("notes")}>Notes by person</button>
           </div>
-          {tab === "transcript" ? (
+          {tab === "summary" ? (
+            <SummaryView meeting={meeting} onJump={showLine} />
+          ) : tab === "transcript" ? (
             <ol className="transcript">
               {segments.map((s) => {
                 const person = people.find((p) => p.id === s.personId);
                 const current = s.start <= time && time < s.end;
                 const also = people.find((p) => p.id === s.alsoHeardId);
                 return (
-                  <li key={s.id} className={current ? "current" : ""}>
+                  <li key={s.id} id={`line-${s.id}`} className={current ? "current" : ""}>
                     <button className="stamp" aria-label={`Jump to ${formatTime(s.start)}`} onClick={() => { setTime(s.start); setPlaying(false); }}>
                       {formatTime(s.start)}
                     </button>

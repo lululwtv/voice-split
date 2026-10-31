@@ -1,11 +1,16 @@
-import { buildSampleMeeting } from "../data/sampleMeeting";
+import { buildSampleMeeting, sampleSummary } from "../data/sampleMeeting";
 import type { Engine, EngineEvent } from "./types";
 
 const TICK_MS = 200;
 /** Transcript lines appear this long after they were spoken, like the real engine will. */
 export const LABEL_DELAY_SECONDS = 3;
 
-export function createSimulatedEngine(): Engine {
+const SUMMARY_SECONDS = 3.5;
+
+/** Rehearses what the screens do when the engine misbehaves. */
+export type SimulatedIssue = "slow" | "engine" | "summary";
+
+export function createSimulatedEngine(issue?: SimulatedIssue): Engine {
   const { segments, windows, duration } = buildSampleMeeting();
   let timer: ReturnType<typeof setInterval> | undefined;
   let emit: (event: EngineEvent) => void = () => {};
@@ -13,6 +18,7 @@ export function createSimulatedEngine(): Engine {
   let nextSegment = 0;
   let nextWindow = 0;
   let ended = false;
+  let summaryTimer: ReturnType<typeof setTimeout> | undefined;
 
   function deliverUpTo(time: number) {
     while (nextWindow < windows.length && windows[nextWindow].end <= time) {
@@ -29,6 +35,9 @@ export function createSimulatedEngine(): Engine {
     clearInterval(timer);
     emit({ type: "activity", levels: {}, elapsed: duration });
     emit({ type: "ended", duration });
+    summaryTimer = setTimeout(() => {
+      emit(issue === "summary" ? { type: "summary_failed" } : { type: "summary", summary: sampleSummary });
+    }, SUMMARY_SECONDS * 1000);
   }
 
   function tick() {
@@ -41,6 +50,11 @@ export function createSimulatedEngine(): Engine {
     }
     emit({ type: "activity", levels, elapsed });
     deliverUpTo(elapsed);
+    if (issue === "slow" && Math.abs(elapsed - 8) < 0.01) emit({ type: "status", delaySeconds: 14 });
+    if (issue === "engine" && Math.abs(elapsed - 8) < 0.01) {
+      clearInterval(timer);
+      emit({ type: "error" });
+    }
     if (elapsed >= duration + LABEL_DELAY_SECONDS) end();
   }
 
@@ -65,6 +79,7 @@ export function createSimulatedEngine(): Engine {
     },
     stop() {
       clearInterval(timer);
+      clearTimeout(summaryTimer);
       ended = true;
     },
   };

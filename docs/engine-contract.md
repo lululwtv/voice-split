@@ -56,12 +56,56 @@ One finished transcript line. Target: within 3 to 5 seconds of being spoken.
 { "type": "ended", "duration": 87.0 }
 ```
 
+### `status`
+
+Sent when lines fall behind. The panel warns when `delaySeconds` goes above 10. Send `0` once caught up.
+
+```json
+{ "type": "status", "delaySeconds": 14 }
+```
+
+### `error`
+
+The engine can't continue. The panel keeps the lines so far and lets people end the meeting.
+
+```json
+{ "type": "error" }
+```
+
+### `summary`
+
+Sent after `ended`. If it can't be written, send `{ "type": "summary_failed" }`. The frontend gives up after 90 seconds and shows the transcript.
+
+```json
+{
+  "type": "summary",
+  "summary": {
+    "overview": "One or two sentences on what happened.",
+    "decisions": [{ "text": "Launch on the sixteenth.", "sources": ["s5", "s8"] }],
+    "actions": [
+      { "text": "Send the screenshots", "ownerId": "weijie", "due": "Monday", "sources": ["s12"] }
+    ],
+    "questions": [{ "text": "Will the payment fix land?", "sources": ["s4"] }]
+  }
+}
+```
+
+- `sources` are `segment` ids. Each point links back to those lines, so people can check it. Unknown ids are skipped.
+- `ownerId` is a person id, or `null` when no owner was stated.
+- `due` is optional free text. Leave it out rather than guess.
+- Run the model locally (for example through Ollama). A paid API would break the "free per meeting" and "stays on this computer" claims shown in the UI.
+
+## Health check
+
+`GET /health` on `VITE_ENGINE_URL` (default `http://localhost:8000`). Any response means the engine is on.
+
 ## Controls, frontend to engine
 
-`start`, `pause`, `resume`, `finish` (send what's left, then `ended`) and `stop`.
+`start`, `pause`, `resume`, `finish` (send what's left, then `ended`, then `summary`) and `stop`.
 
 ## Open questions for the engine
 
 - Can Whisper and Resemblyzer keep up on one laptop during a video call? This is the biggest risk, and it should be measured before more UI work.
 - How are enrollment clips sent? The frontend currently stores them as browser recordings (usually WebM/Opus) or uploaded audio files, so the engine needs to convert them.
+- Which local model writes the summary, and how long does it take on a laptop?
 - How is overlap detected? It isn't in the current pipeline design.

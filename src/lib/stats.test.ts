@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { buildSampleMeeting } from "../data/sampleMeeting";
+import { buildSampleMeeting, sampleSummary } from "../data/sampleMeeting";
+import { liveStatus } from "./liveStatus";
 import { createSimulatedEngine } from "../engine/simulatedEngine";
 import type { Segment } from "../types";
 import { toMarkdown } from "./export";
@@ -49,11 +50,34 @@ describe("sample meeting", () => {
     expect(types.at(-1)).toBe("ended");
   });
 
+  it("only cites transcript lines that exist", () => {
+    const ids = new Set(buildSampleMeeting().segments.map((s) => s.id));
+    const { decisions, actions, questions } = sampleSummary;
+    for (const item of [...decisions, ...actions, ...questions]) {
+      expect(item.sources.length).toBeGreaterThan(0);
+      expect(item.sources.every((id) => ids.has(id))).toBe(true);
+    }
+  });
+
   it("exports labels into markdown", () => {
     const { people, segments, windows, duration } = buildSampleMeeting();
-    const md = toMarkdown({ title: "T", isSample: true, people, segments, windows, duration });
+    const md = toMarkdown({ title: "T", isSample: true, people, segments, windows, duration, summary: sampleSummary });
+    expect(md).toContain("**Wei Jie:** Send the final screenshots (by Monday)");
     expect(md).toContain("**Maya** [00:01]");
     expect(md).toContain("Sample meeting");
     expect(md).toContain("Overlapping speech");
   });
+});
+
+describe("liveStatus", () => {
+  const base = { paused: false, ended: false, engineLost: false, delaySeconds: 0, silentSeconds: 0 };
+
+  it("listens by default", () => expect(liveStatus(base)).toBe("listening"));
+  it("says quiet after a long silence", () => expect(liveStatus({ ...base, silentSeconds: 21 })).toBe("quiet"));
+  it("says behind when lines lag", () => expect(liveStatus({ ...base, delaySeconds: 11 })).toBe("behind"));
+  it("puts a lost engine above everything but the end", () => {
+    expect(liveStatus({ ...base, paused: true, engineLost: true })).toBe("lost");
+    expect(liveStatus({ ...base, ended: true, engineLost: true })).toBe("finished");
+  });
+  it("does not call a paused meeting quiet", () => expect(liveStatus({ ...base, paused: true, silentSeconds: 99 })).toBe("paused"));
 });

@@ -46,14 +46,24 @@ export function stopStream(stream: MediaStream | null) {
   stream?.getTracks().forEach((t) => t.stop());
 }
 
+/** Remembers whether a stream has made any sound since it connected. */
+export function useHeardSound(stream: MediaStream | null, level: number) {
+  const [heard, setHeard] = useState(false);
+  useEffect(() => setHeard(false), [stream]);
+  useEffect(() => {
+    if (level > 0.04) setHeard(true);
+  }, [level]);
+  return heard;
+}
+
 export function audioErrorMessage(error: unknown, source: "mic" | "tab") {
   const name = error instanceof Error ? error.name : "";
   const message = error instanceof Error ? error.message : "";
-  if (message === "no-audio") return 'No sound came through. Share the Meet tab again and turn on "Also share tab audio".';
+  if (message === "no-audio") return 'That share has no sound. Pick the meeting tab and turn on "Also share tab audio".';
   if (name === "NotAllowedError") {
     return source === "mic"
       ? "Microphone access is blocked. Allow it from the icon in Chrome's address bar, then try again."
-      : "Sharing was cancelled. Try again and pick the Meet tab.";
+      : "Sharing was cancelled. Try again and pick the meeting tab.";
   }
   if (name === "NotFoundError") return "No microphone found. Plug one in and try again.";
   return source === "mic" ? "Couldn't reach the microphone. Try again." : "Couldn't share that tab. Use Chrome and try again.";
