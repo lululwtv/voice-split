@@ -144,19 +144,36 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <Thread root={root} />
 
       <section className="scene scene-call">
-        <p className="caption">Three in one room. One in another.</p>
+        <div>
+          <p className="stat-line">
+            More people now meet online or hybrid (86%) than in person.
+            <sup>
+              <a
+                href="#fn1"
+                aria-label="Source"
+                onClick={(e) => {
+                  e.preventDefault();
+                  document.getElementById("fn1")?.scrollIntoView({ behavior: "smooth", block: "center" });
+                }}
+              >
+                1
+              </a>
+            </sup>
+          </p>
+          <p className="caption">Three in the room.<br />One dialing in from home.</p>
+        </div>
         <VideoCall />
       </section>
       <section className="scene">
-        <p className="caption">Three voices share one laptop. One has its own.</p>
+        <p className="caption">The three share one laptop mic.<br />The remote one has their own.</p>
         <Laptops />
       </section>
       <section className="scene">
-        <p className="caption">Your notetaker hears one speaker in the room. Who owns the action item?</p>
+        <p className="caption">Your AI notetaker hears the whole room as a single speaker.<br />So who owns the action item?</p>
         <FlatTranscript />
       </section>
       <section className="scene" data-thread="split-scene">
-        <p className="caption">Enroll each voice once. timbre splits one channel back into people.</p>
+        <p className="caption">Enroll each voice once.<br />Timbre splits that shared channel back into the people who spoke.</p>
         <FixedTranscript />
       </section>
 
@@ -284,6 +301,9 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       </section>
 
       <footer className="home-foot pitch-foot">
+        <p id="fn1" className="footnote">
+          1. <Source href="https://owllabs.com/state-of-hybrid-work/2024">Owl Labs, State of Hybrid Work 2024</Source>, US report: 86% of workers have online or hybrid meetings, 83% in-person ones.
+        </p>
         <span>timbre · Built for Autonomous SG 2026 · NUS Hackers</span>
         <span className={`engine-chip ${props.engine}`}><i /> {engineText[props.engine]}</span>
         <a href={REPO} target="_blank" rel="noreferrer"><GithubLogoIcon size={15} /> MIT</a>
