@@ -4,19 +4,29 @@ Know who said what, even when a whole room shares one mic. Timbre runs beside Go
 
 ## Status
 
-The frontend is built. The speech engine isn't connected yet, so transcripts and summaries in the app come from a scripted sample and are labelled as simulated. Voice enrollment, microphone capture and Meet tab capture use real browser audio.
+The Timbre frontend connects to the local voice-split backend for saved voices, meeting rooms, transcription, speaker corrections and exports. Speaker labels are estimates and can be corrected. Automatic summaries and direct Google Meet integration are not implemented.
 
 ## Run it
 
-Requires Node 22 and Chrome.
+Requires Node 22, Python 3.11, uv and a browser with microphone access. On Apple Silicon, MLX Whisper uses the GPU; other machines can use the CPU engine. Models download on first startup.
 
 ```bash
-npm install
-npm run dev
+npm ci
+npm run build
+uv sync --python 3.11 --extra test
+VOICE_SPLIT_ASR_BACKEND=mlx uv run uvicorn voice_split.server:app --host 127.0.0.1 --port 4320
 ```
 
-Open http://localhost:5173. Add `?issue=slow`, `?issue=engine` or `?issue=summary` to rehearse those failures in the sample. `npm test` runs the tests and `npm run build` makes a production build.
+Open http://127.0.0.1:4320. Omit `VOICE_SPLIT_ASR_BACKEND=mlx` for the CPU engine. Wait for model loading to finish before recording. `npm test` checks the frontend; `uv run pytest -q` checks the backend.
 
-## Connect the engine
+## Contributing
 
-Implement the `Engine` interface in `src/engine/types.ts`, then set `createRealEngine` in `src/engine/index.ts`. The messages it expects are in [docs/engine-contract.md](docs/engine-contract.md).
+Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and how to submit a change.
+
+Timbre is available under the [MIT license](LICENSE).
+
+## Local data
+
+Saved voices and transcripts live in `~/.local/share/voice-split`, independently of this repository. Set `VOICE_SPLIT_DATA_DIR` to use a separate test workspace. Raw enrollment recordings are not retained. No paid API key is required. The server accepts localhost connections only.
+
+Speaker matching requires credible evidence, not just the closest voice. Numbered unknown voices persist within each meeting; ambiguous matches stay unassigned. Configure `VOICE_SPLIT_OPEN_THRESHOLD` (0.55), `VOICE_SPLIT_OPEN_MARGIN` (0.08), and `VOICE_SPLIT_UNKNOWN_THRESHOLD` (0.65) before startup. Clips under 0.5 seconds require 0.05 more named-match similarity. Existing unknown references compete with borderline named matches; strong named matches (0.80+) may resolve a previously unknown voice. Confidence labels are heuristic, not accuracy percentages. Short clips can still fragment one unknown speaker into several identities; thresholds need evaluation on separate labeled meeting recordings. Corrections retain original evidence but do not automatically train profiles or adjust thresholds.

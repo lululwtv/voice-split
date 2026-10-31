@@ -11,7 +11,8 @@ const engineText: Record<EngineStatus, string> = {
 export function Home(props: {
   engine: EngineStatus;
   onStart: () => void;
-  onSample: () => void;
+  onRecordVoice: () => void;
+  children?: React.ReactNode;
 }) {
   return (
     <main className="home">
@@ -19,12 +20,14 @@ export function Home(props: {
       <div className="home-bottom">
         <h1>timbre</h1>
         <div className="home-actions">
+          <button className="btn large" onClick={props.onRecordVoice}>Record your voice</button>
           <button className="btn primary large" onClick={props.onStart}>
             Start meeting <ArrowRightIcon />
           </button>
-          <button className="btn large" onClick={props.onSample}>Sample</button>
+
         </div>
       </div>
+      {props.children}
       <footer className="home-foot">
         <span className={`engine-chip ${props.engine}`}><i /> {engineText[props.engine]}</span>
         <a href="https://github.com/lululwtv/voice-split" target="_blank" rel="noreferrer">

@@ -10,11 +10,17 @@ export interface Person {
 
 export interface VoiceMatch {
   personId: string;
-  /** Cosine similarity against the enrolled voiceprint, 0 to 1. */
+  /** Cosine similarity against the enrolled voiceprint, -1 to 1; not a probability. */
   score: number;
 }
 
 export interface Segment {
+  speakerLabel?: string;
+  unknownId?: string | null;
+  confidence?: string;
+  revision?: number;
+  profile_id?: string | null;
+  assignment_source?: string;
   id: string;
   start: number;
   end: number;
@@ -56,6 +62,7 @@ export interface Summary {
 }
 
 export interface Meeting {
+  roomId?: string;
   title: string;
   isSample: boolean;
   people: Person[];

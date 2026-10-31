@@ -43,6 +43,8 @@ export function Connect(props: {
   onConnectTab: () => void;
   onBack: () => void;
   onStart: () => void;
+  onUpload: (file: File) => void;
+  busy: boolean;
 }) {
   const { mic, tab } = props;
   const [consent, setConsent] = useState(false);
@@ -52,7 +54,7 @@ export function Connect(props: {
     setWrongBrowser(!navigator.mediaDevices?.getDisplayMedia || !("documentPictureInPicture" in window));
   }, []);
 
-  const ready = !!mic && !!tab && consent;
+  const ready = (!!mic || !!tab) && consent && props.engine === "found" && !props.busy;
 
   return (
     <main className="page narrow-page">
@@ -82,7 +84,9 @@ export function Connect(props: {
           Everyone knows this is transcribed
         </label>
       </section>
-      {props.engine !== "found" && <span className="sample-tag">Sample</span>}
+      {props.engine !== "found" && <p className="notice warn">Wait for the local engine to be ready.</p>}
+      <p className="muted">Connect a room mic, a call tab, or both. You can also upload a recording of up to 60 seconds.</p>
+      <label className="btn">Upload recording<input type="file" accept="audio/*" hidden disabled={!consent || props.engine !== "found" || props.busy} onChange={(e) => { const file = e.target.files?.[0]; if (file) props.onUpload(file); e.target.value = ""; }} /></label>
       <div className="step-nav">
         <button className="btn" onClick={props.onBack}>Back</button>
         <button className="btn primary large" disabled={!ready} onClick={props.onStart}>

@@ -1,12 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
-import { colorOf, SpeakerSelect, whoStyle } from "../components/people";
+import { colorOf, SpeakerSelect, whoStyle, NameVoice } from "../components/people";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
-import { formatTime, labelAccuracy, talkTime } from "../lib/stats";
+import { correctSpeaker, loadMeeting, mergeSegment, roomPath } from "../lib/api";
+import { formatTime, isCorrected, labelAccuracy, speakerNotes, talkTime } from "../lib/stats";
 import type { Meeting, Person, Segment } from "../types";
-
-const TARGET_PERCENT = 80;
 
 function SplitTimeline(props: { meeting: Meeting; time: number; onSeek: (t: number) => void }) {
   const { people, windows, duration } = props.meeting;
@@ -54,17 +53,18 @@ function SplitTimeline(props: { meeting: Meeting; time: number; onSeek: (t: numb
 function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
   return (
     <div className="why">
-      <p>Closest voices in this stretch of audio:</p>
+      <p>Voice similarity (not an accuracy percentage):</p>
+      {segment.personId === null && <p>No enrolled voice matched reliably. The closest candidate below was not assigned.</p>}
       <ul>
         {segment.matches.map((m) => {
           const person = people.find((p) => p.id === m.personId);
           return (
             <li key={m.personId}>
-              <span>{person?.name}</span>
+              <span>{person?.name ?? m.personId}</span>
               <span className="why-track">
-                <i style={{ width: `${m.score * 100}%`, background: colorOf(people, m.personId) }} />
+                <i style={{ width: `${Math.max(0, Math.min(1, m.score)) * 100}%`, background: colorOf(people, m.personId) }} />
               </span>
-              <span>{Math.round(m.score * 100)}%</span>
+              <span>{m.score.toFixed(2)}</span>
             </li>
           );
         })}
@@ -74,11 +74,19 @@ function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
 }
 
 export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: Meeting) => void }) {
-  const [tab, setTab] = useState<"summary" | "transcript" | "notes">("summary");
+  const [tab, setTab] = useState<"summary" | "transcript" | "notes">(meeting.isSample ? "summary" : "transcript");
   const [jumpTo, setJumpTo] = useState<string | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [open, setOpen] = useState<string | null>(null);
+  const [error, setError] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
+  const scope = useRef({ roomId: meeting.roomId, active: true });
+  if (scope.current.roomId !== meeting.roomId) scope.current = { roomId: meeting.roomId, active: true };
+  useEffect(() => {
+    scope.current.active = true;
+    return () => { scope.current.active = false; };
+  }, []);
   const { people, segments, windows, duration } = meeting;
 
   useEffect(() => {
@@ -110,14 +118,33 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
   };
 
   const accuracy = labelAccuracy(segments);
-  const talk = talkTime(people, windows);
+  const notes = speakerNotes(people, segments);
+  const talk = [...talkTime(people, windows), ...notes.filter((group) => group.personId === null).map((group) => ({
+    person: { id: group.id, name: group.name },
+    seconds: group.segments.reduce((seconds, segment) => seconds + segment.end - segment.start, 0),
+  }))];
   const longest = Math.max(1, ...talk.map((t) => t.seconds));
-  const relabel = (id: string, personId: string | null) =>
-    onChange({
-      ...meeting,
-      relabelledSinceSummary: !!meeting.summary,
-      segments: segments.map((s) => (s.id === id ? { ...s, personId } : s)),
-    });
+  const relabel = async (id: string, personId: string | null) => {
+    const owner = scope.current;
+    const isCurrent = () => scope.current === owner && owner.active;
+    const segment = segments.find((s) => s.id === id);
+    if (!personId || !segment || saving) return;
+    if (!meeting.roomId) { onChange({ ...meeting, segments: segments.map((s) => s.id === id ? { ...s, personId } : s) }); return; }
+    setSaving(id); setError("");
+    try {
+      const saved = await correctSpeaker(meeting.roomId, segment, personId);
+      if (!isCurrent()) return;
+      const next = mergeSegment(segments, saved);
+      onChange({ ...meeting, segments: next, windows: next.flatMap((s) => s.personId ? [{ start: s.start, end: s.end, personId: s.personId }] : []) });
+    } catch (error) {
+      if (!isCurrent()) return;
+      setError((error as Error).message);
+      try {
+        const refreshed = await loadMeeting({ id: meeting.roomId, title: meeting.title }, people);
+        if (isCurrent()) onChange(refreshed);
+      } catch { /* Keep the current transcript. */ }
+    } finally { if (isCurrent()) setSaving(null); }
+  };
   const fileBase = meeting.title.toLowerCase().replace(/[^a-z0-9]+/g, "-");
 
   if (segments.length === 0) {
@@ -140,12 +167,16 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
           <button className="btn" onClick={() => download(`${fileBase}.md`, toMarkdown(meeting), "text/markdown")}>
             <DownloadSimpleIcon /> Markdown
           </button>
-          <button className="btn" onClick={() => download(`${fileBase}.json`, toJson(meeting), "application/json")}>
+          <button className="btn" onClick={async () => {
+            if (!meeting.roomId) { download(`${fileBase}.json`, toJson(meeting), "application/json"); return; }
+            try { const response = await fetch(`${roomPath(meeting.roomId)}/export?format=json`); if (!response.ok) throw new Error("Export failed."); download(`${fileBase}.json`, await response.text(), "application/json"); } catch (error) { setError((error as Error).message); }
+          }}>
             <DownloadSimpleIcon /> JSON
           </button>
         </div>
       </div>
 
+      {error && <p className="error" role="alert">{error}</p>}
       {meeting.isSample && (
         <span className="sample-tag">Sample</span>
       )}
@@ -156,7 +187,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             if (time >= duration) setTime(0);
             setPlaying(!playing);
           }}>
-            {playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />} {playing ? "Pause" : "Replay"}
+            {playing ? <PauseIcon weight="fill" /> : <PlayIcon weight="fill" />} {playing ? "Pause timeline" : "Play timeline"}
           </button>
           <time>{formatTime(time)} / {formatTime(duration)}</time>
         </div>
@@ -168,7 +199,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
           <div className="tabs" role="tablist">
             <button role="tab" aria-selected={tab === "summary"} onClick={() => setTab("summary")}>Summary</button>
             <button role="tab" aria-selected={tab === "transcript"} onClick={() => setTab("transcript")}>Transcript</button>
-            <button role="tab" aria-selected={tab === "notes"} onClick={() => setTab("notes")}>Notes by person</button>
+            <button role="tab" aria-selected={tab === "notes"} onClick={() => setTab("notes")}>Notes by speaker</button>
           </div>
           {tab === "summary" ? (
             <SummaryView meeting={meeting} onJump={showLine} />
@@ -187,8 +218,9 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
                         <span className="overlap"><UsersThreeIcon /> Overlap</span>
                       ) : (
                         <div className="t-who">
-                          <SpeakerSelect people={people} value={s.personId} label={`Speaker of line at ${formatTime(s.start)}`} onChange={(id) => relabel(s.id, id)} />
-                          {s.personId !== s.originalPersonId && <span className="edited">Corrected</span>}
+                          <SpeakerSelect people={people} disabled={saving === s.id} value={s.personId} unknownLabel={s.speakerLabel} confidence={s.confidence} label={`Speaker of line at ${formatTime(s.start)}`} onChange={(id) => relabel(s.id, id)} />
+                          <NameVoice roomId={meeting.roomId} segment={s} onSaved={(rows) => onChange({ ...meeting, segments: rows.reduce(mergeSegment, segments) })} />
+                          {isCorrected(s) && <span className="edited">Corrected</span>}
                           {s.matches.length > 0 && (
                             <button className="link-btn" aria-expanded={open === s.id} onClick={() => setOpen(open === s.id ? null : s.id)}>
                               Why? <CaretDownIcon className={open === s.id ? "flip" : ""} />
@@ -208,11 +240,11 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             </ol>
           ) : (
             <div className="notes">
-              {people.map((p) => {
-                const said = segments.filter((s) => s.personId === p.id);
+              {notes.map((group) => {
+                const said = group.segments;
                 return (
-                  <article key={p.id}>
-                    <h3 style={whoStyle(people, p.id)}>{p.name}</h3>
+                  <article key={group.id}>
+                    <h3 style={whoStyle(people, group.personId)}>{group.name}</h3>
                     {said.length ? (
                       <ul>{said.map((s) => <li key={s.id}><time>{formatTime(s.start)}</time> {s.text}</li>)}</ul>
                     ) : (
@@ -228,12 +260,10 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
         <aside className="side">
           <section className="panel">
             <h3>Labels</h3>
-            <p className="big">{accuracy.percent}%</p>
-            <div className="target-track">
-              <i style={{ width: `${accuracy.percent}%` }} className={accuracy.percent >= TARGET_PERCENT ? "met" : ""} />
-              <b style={{ left: `${TARGET_PERCENT}%` }} />
-            </div>
-            <p className="muted">{accuracy.changed} corrected · {accuracy.unnamed} unnamed · {accuracy.total} lines · target {TARGET_PERCENT}%</p>
+            <p className="big">{accuracy.total - accuracy.unnamed}</p>
+            <p className="muted">Named {accuracy.total - accuracy.unnamed === 1 ? "line" : "lines"}</p>
+            <p className="muted">{accuracy.changed} corrected · {accuracy.unnamed} unknown · {accuracy.total} lines</p>
+            <p className="muted">Label counts do not measure speaker identification accuracy.</p>
           </section>
           <section className="panel">
             <h3>Talk time</h3>

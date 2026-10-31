@@ -5,7 +5,7 @@ const steps = [
   {
     icon: FingerprintIcon,
     title: "Learn each voice",
-    body: "Each person reads one sentence. Resemblyzer turns it into a voiceprint: a list of numbers that describes how that person sounds.",
+    body: "Each person records a short passage. The local speaker model turns it into a saved voice reference. Select the voices attending each meeting.",
   },
   {
     icon: WaveformIcon,
@@ -20,12 +20,12 @@ const steps = [
   {
     icon: TagIcon,
     title: "Put a name on each line",
-    body: "For every line, Timbre checks which person holds the most slices in that time span. That person gets the label.",
+    body: "The local engine compares voices in short speech turns against this meeting's participants. You can correct a label in the live transcript or review. Corrections are saved with the meeting.",
   },
   {
     icon: ListChecksIcon,
     title: "Hand you the notes",
-    body: "When the meeting ends, a model reads the labelled transcript and writes the decisions and action items. You also get the full transcript and each person's lines, as Markdown and JSON.",
+    body: "The transcript is saved on this machine as you speak. Reopen a meeting to review each person's lines, correct speakers, and export Markdown or JSON. Automatic summaries are not enabled in this local engine.",
   },
 ];
 

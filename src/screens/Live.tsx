@@ -1,11 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, PlusIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
-import { SpeakerSelect, whoStyle } from "../components/people";
+import { CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
+import { SpeakerSelect, whoStyle, NameVoice } from "../components/people";
 import type { Engine } from "../engine/types";
+import { correctSpeaker, loadMeeting, mergeSegment, request, roomPath } from "../lib/api";
+import { loadPeople } from "../lib/peopleStore";
 import { liveStatus, type LiveStatus } from "../lib/liveStatus";
 import { canPopOut, openPopOut } from "../lib/popOut";
-import { formatTime } from "../lib/stats";
+import { formatTime, isCorrected } from "../lib/stats";
 import type { Meeting, Person, Segment, Summary, VoiceWindow } from "../types";
 
 const SUMMARY_TIMEOUT_MS = 90_000;
@@ -31,7 +33,7 @@ function useTrackEnded(stream: MediaStream | null, onEnded: () => void) {
 function WrapUp(props: { onSkip: () => void }) {
   return (
     <div className="wrapup">
-      <h1>Summarizing<CircleNotchIcon size={34} className="spin" /></h1>
+      <h1>Finishing transcript<CircleNotchIcon size={34} className="spin" /></h1>
       <button className="link-btn" onClick={props.onSkip}>Skip</button>
     </div>
   );
@@ -39,6 +41,7 @@ function WrapUp(props: { onSkip: () => void }) {
 
 export function Live(props: {
   createEngine: () => Engine;
+  roomId?: string;
   initialPeople: Person[];
   isSample: boolean;
   initialPopup: Window | null;
@@ -60,8 +63,8 @@ export function Live(props: {
   const [micLost, setMicLost] = useState(false);
   const [tabLost, setTabLost] = useState(false);
   const [reconnectFailed, setReconnectFailed] = useState(false);
-  const [adding, setAdding] = useState(false);
-  const [newName, setNewName] = useState("");
+  const [message, setMessage] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
   const [wrapping, setWrapping] = useState(false);
   const [summary, setSummary] = useState<Summary | null>(null);
   const [summaryFailed, setSummaryFailed] = useState(false);
@@ -85,18 +88,22 @@ export function Live(props: {
           setLevels(event.levels);
           setElapsed(event.elapsed);
           if (Object.keys(event.levels).length) lastSound = event.elapsed;
-          setSilentSeconds(event.elapsed - lastSound);
+          setSilentSeconds(props.isSample ? event.elapsed - lastSound : 0);
           break;
         case "window":
           windows.current.push(event.window);
           break;
         case "segment":
-          setSegments((list) => [...list, event.segment]);
+          setSegments((list) => mergeSegment(list, event.segment));
           break;
         case "status":
           setDelaySeconds(event.delaySeconds);
           break;
+        case "participants":
+          void loadPeople().then((all) => setPeople(all.filter((p) => event.ids.includes(p.id))));
+          break;
         case "error":
+          setMessage(event.message ?? "The engine stopped.");
           setEngineLost(true);
           setLevels({});
           break;
@@ -115,6 +122,8 @@ export function Live(props: {
     return () => running.stop();
   }, [props.createEngine]);
 
+  useEffect(() => { engine.current?.reconnectAudio?.(); }, [props.mic, props.tab]);
+
   useTrackEnded(props.mic, () => setMicLost(true));
   useTrackEnded(props.tab, () => setTabLost(true));
 
@@ -129,7 +138,7 @@ export function Live(props: {
       isSample: props.isSample,
       people,
       segments,
-      windows: windows.current,
+      windows: props.isSample ? windows.current : segments.flatMap((s) => s.personId ? [{ start: s.start, end: s.end, personId: s.personId }] : []),
       duration: duration.current || elapsed,
       summary: finalSummary,
     });
@@ -152,11 +161,21 @@ export function Live(props: {
     setWrapping(true);
   };
 
-  const addPerson = () => {
-    if (!newName.trim()) return;
-    setPeople((list) => [...list, { id: crypto.randomUUID(), name: newName.trim(), role: "room" }]);
-    setNewName("");
-    setAdding(false);
+  const relabel = async (segment: Segment, personId: string | null) => {
+    if (!props.roomId || !personId || saving) return;
+    setSaving(segment.id); setMessage("");
+    try { const saved = await correctSpeaker(props.roomId, segment, personId); setSegments((list) => mergeSegment(list, saved)); }
+    catch (error) {
+      setMessage((error as Error).message);
+      try { const current = await loadMeeting({ id: props.roomId, title: "Meeting" }, people); setSegments((list) => current.segments.reduce(mergeSegment, list)); } catch { /* Keep the saved transcript visible. */ }
+    } finally { setSaving(null); }
+  };
+  const refreshParticipants = async () => {
+    if (!props.roomId) return;
+    try {
+      const [all, roster] = await Promise.all([loadPeople(), request<{participant_ids: string[]}>(`${roomPath(props.roomId)}/participants`)]);
+      setPeople(all.filter((p) => roster.participant_ids.includes(p.id)));
+    } catch (error) { setMessage((error as Error).message); }
   };
 
   const togglePause = () => {
@@ -196,6 +215,7 @@ export function Live(props: {
         )}
       </header>
       {props.isSample && <span className="sample-tag">Sample</span>}
+      {message && <p className="alert" role="alert">{message}</p>}
       {engineLost && !ended && (
         <p className="alert" role="alert"><WarningIcon /> Engine stopped. Lines saved.</p>
       )}
@@ -236,18 +256,13 @@ export function Live(props: {
               <div className="line-head">
                 {s.overlap ? (
                   <strong>Overlap</strong>
-                ) : person ? (
-                  <strong>{person.name}</strong>
                 ) : (
-                  <SpeakerSelect
-                    people={people}
-                    value={null}
-                    label="Name this speaker"
-                    onChange={(personId) =>
-                      setSegments((list) => list.map((x) => (x.id === s.id ? { ...x, personId } : x)))
-                    }
-                  />
+                  <SpeakerSelect people={people} value={s.personId} disabled={saving === s.id} unknownLabel={s.speakerLabel} confidence={s.confidence}
+                    label={`Speaker of line at ${formatTime(s.start)}`}
+                    onChange={(personId) => void relabel(s, personId)} />
                 )}
+                {person && isCorrected(s) && <span className="edited">Corrected</span>}
+                <NameVoice roomId={props.roomId} segment={s} onSaved={(rows) => setSegments((list) => rows.reduce(mergeSegment, list))} />
                 <time>{formatTime(s.start)}</time>
               </div>
               <p>{s.text}</p>
@@ -256,22 +271,7 @@ export function Live(props: {
         })}
       </ol>
       <footer className="live-foot">
-        {adding ? (
-          <form
-            className="add-inline"
-            onSubmit={(e) => {
-              e.preventDefault();
-              addPerson();
-            }}
-          >
-            <input autoFocus aria-label="New person's name" value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Name" />
-            <button className="btn">Add</button>
-          </form>
-        ) : (
-          <button className="link-btn" onClick={() => setAdding(true)}>
-            <PlusIcon /> Add person
-          </button>
-        )}
+        <button className="link-btn" onClick={refreshParticipants}>Refresh participants</button>
         <div className="live-actions">
           {!ended && !engineLost && (
             <button className="btn" onClick={togglePause}>
