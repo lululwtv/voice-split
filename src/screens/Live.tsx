@@ -271,7 +271,7 @@ export function Live(props: {
         })}
       </ol>
       <footer className="live-foot">
-        <button className="link-btn" onClick={refreshParticipants}>Refresh participants</button>
+        {props.roomId && <button className="link-btn" onClick={refreshParticipants}>Refresh participants</button>}
         <div className="live-actions">
           {!ended && !engineLost && (
             <button className="btn" onClick={togglePause}>

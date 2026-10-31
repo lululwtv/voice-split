@@ -4,6 +4,7 @@ import { HeroSplit } from "../components/HeroSplit";
 import { Thread } from "../components/Thread";
 import { TypingBubble } from "../components/TypingBubble";
 import type { EngineStatus } from "../engine";
+import { demoVideoUrl, isDeployedSite } from "../lib/deployment";
 
 const REPO = "https://github.com/lululwtv/voice-split";
 const engineText: Record<EngineStatus, string> = { checking: "Engine…", off: "Engine off", found: "Engine on" };
@@ -129,10 +130,14 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
   const root = useRef<HTMLElement>(null);
   const startButtons = (
     <div className="home-actions">
-      <button className="btn primary large" onClick={props.onStart}>
-        Start meeting <ArrowRightIcon />
+      {!isDeployedSite && (
+        <button className="btn primary large" onClick={props.onStart}>
+          Start meeting <ArrowRightIcon />
+        </button>
+      )}
+      <button className={`btn large ${isDeployedSite ? "primary" : ""}`} onClick={props.onSample}>
+        Sample
       </button>
-      <button className="btn large" onClick={props.onSample}>Sample</button>
     </div>
   );
 
@@ -231,11 +236,23 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
         </ol>
       </section>
 
-      <section className="pitch-section demo" data-thread="section">
-        <h2>Live demo</h2>
-        <p>Enroll the voices in this room, start the meeting, and watch one shared channel split into named speakers.</p>
-        {startButtons}
-      </section>
+      {isDeployedSite ? (
+        <section className="pitch-section demo" data-thread="section">
+          <h2>See it work</h2>
+          {demoVideoUrl ? (
+            <video className="demo-video" src={demoVideoUrl} controls playsInline preload="metadata" />
+          ) : (
+            <div className="demo-video empty">Demo video</div>
+          )}
+          {startButtons}
+        </section>
+      ) : (
+        <section className="pitch-section demo" data-thread="section">
+          <h2>Live demo</h2>
+          <p>Enroll the voices in this room, start the meeting, and watch one shared channel split into named speakers.</p>
+          {startButtons}
+        </section>
+      )}
 
       <section className="pitch-section" data-thread="section">
         <h2>Where timbre fits</h2>
@@ -309,7 +326,7 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
           1. <Source href="https://owllabs.com/state-of-hybrid-work/2024">Owl Labs, State of Hybrid Work 2024</Source>, US report: 86% of workers have online or hybrid meetings, 83% in-person ones.
         </p>
         <span>timbre · Built for Autonomous SG 2026 · NUS Hackers</span>
-        <span className={`engine-chip ${props.engine}`}><i /> {engineText[props.engine]}</span>
+        {!isDeployedSite && <span className={`engine-chip ${props.engine}`}><i /> {engineText[props.engine]}</span>}
         <a href={REPO} target="_blank" rel="noreferrer"><GithubLogoIcon size={15} /> MIT</a>
       </footer>
     </main>

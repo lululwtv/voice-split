@@ -398,6 +398,8 @@ tbody th { font-weight: 600; white-space: nowrap; }
 .agent-points h3 { margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; color: var(--ink); text-transform: none; }
 .limit { padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); }
 .limit b { color: var(--ink); }
+.demo-video { width: 100%; aspect-ratio: 16 / 9; background: #0d0d11; border-radius: 12px; }
+.demo-video.empty { display: grid; place-items: center; color: #a0a0a8; font-family: var(--display); font-size: 1.25rem; }
 .closing { justify-items: center; text-align: center; padding-bottom: 96px; }
 .repo { position: relative; margin-top: 12px; text-decoration: none; }
 .pitch-foot { flex-wrap: wrap; border-top: 1px solid var(--line); padding-top: 14px; }

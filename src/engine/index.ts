@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { createSimulatedEngine, type SimulatedIssue } from "./simulatedEngine";
 import { request } from "../lib/api";
+import { isDeployedSite } from "../lib/deployment";
 export { createLocalEngine } from "./localEngine";
 export function createSampleEngine() {
   const issue = new URLSearchParams(location.search).get("issue") as SimulatedIssue | null;
@@ -11,6 +12,7 @@ export interface EngineHealth { ready: boolean; loading?: boolean; error?: strin
 export function useEngineHealth() {
   const [health, setHealth] = useState<EngineHealth | null>(null);
   useEffect(() => {
+    if (isDeployedSite) return;
     let active = true;
     const check = () => request<EngineHealth>("/api/status")
       .then((next) => { if (active) setHealth(next); })

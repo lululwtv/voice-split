@@ -130,7 +130,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
     const isCurrent = () => scope.current === owner && owner.active;
     const segment = segments.find((s) => s.id === id);
     if (!personId || !segment || saving) return;
-    if (!meeting.roomId) { onChange({ ...meeting, segments: segments.map((s) => s.id === id ? { ...s, personId } : s) }); return; }
+    if (!meeting.roomId) { onChange({ ...meeting, relabelledSinceSummary: !!meeting.summary, segments: segments.map((s) => s.id === id ? { ...s, personId } : s) }); return; }
     setSaving(id); setError("");
     try {
       const saved = await correctSpeaker(meeting.roomId, segment, personId);

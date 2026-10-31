@@ -5,6 +5,7 @@ import { createLocalEngine, createSampleEngine, useEngineHealth, type EngineStat
 import { loadMeeting, request, roomPath } from "./lib/api";
 import { audioErrorMessage, requestMeetingTab, requestMic, stopStream, toWav } from "./lib/audio";
 import { loadPeople } from "./lib/peopleStore";
+import { isDeployedSite } from "./lib/deployment";
 import { canPopOut, closePopOut, openPopOut } from "./lib/popOut";
 import { useTheme } from "./lib/theme";
 import type { Meeting, Person } from "./types";
@@ -29,6 +30,8 @@ const paths: Record<Screen, string> = {
   how: "#/how",
 };
 
+const ENGINE_SCREENS: Screen[] = ["meetings", "attendees", "connect"];
+
 function screenFromUrl(): Screen {
   const match = (Object.keys(paths) as Screen[]).find((key) => paths[key] === location.hash);
   return match ?? "home";
@@ -37,6 +40,7 @@ function screenFromUrl(): Screen {
 /** Live, connect and review need state that a reload loses, so they can't be opened directly. */
 function firstScreen(): Screen {
   const screen = screenFromUrl();
+  if (isDeployedSite) return screen === "how" ? screen : "home";
   return screen === "how" || screen === "meetings" || screen === "attendees" ? screen : "home";
 }
 
@@ -123,6 +127,7 @@ export function App() {
   useEffect(() => {
     const onPopState = () => {
       let target = screenFromUrl();
+      if (isDeployedSite && ENGINE_SCREENS.includes(target)) target = "home";
       if (screen === "live" && target !== "live") {
         if (!window.confirm("Leave this meeting?")) {
           history.pushState(null, "", paths.live);
@@ -245,9 +250,11 @@ export function App() {
             timbre
           </button>
           <nav>
-            <button className={["meetings", "attendees", "connect"].includes(screen) ? "active" : ""} onClick={() => go("meetings")}>
-              Meetings
-            </button>
+            {!isDeployedSite && (
+              <button className={ENGINE_SCREENS.includes(screen) ? "active" : ""} onClick={() => go("meetings")}>
+                Meetings
+              </button>
+            )}
             {meeting && (
               <button className={screen === "review" ? "active" : ""} onClick={() => go("review")}>
                 Last
