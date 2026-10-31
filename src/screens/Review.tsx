@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { colorOf, SpeakerSelect, whoStyle, NameVoice } from "../components/people";
 import { PublishPanel } from "../components/PublishPanel";
+import { SampleNotice } from "../components/SampleNotice";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
 import { correctSpeaker, loadMeeting, mergeSegment, roomPath } from "../lib/api";
@@ -179,7 +180,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
 
       {error && <p className="error" role="alert">{error}</p>}
       {meeting.isSample && (
-        <span className="sample-tag">Sample</span>
+        <SampleNotice />
       )}
 
       <section className="panel split">

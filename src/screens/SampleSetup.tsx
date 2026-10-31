@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRightIcon, BrowserIcon, CheckCircleIcon, CircleNotchIcon, MicrophoneIcon, PictureInPictureIcon } from "@phosphor-icons/react";
+import { SampleNotice } from "../components/SampleNotice";
 import { Steps } from "../components/Steps";
 import { samplePeople } from "../data/sampleMeeting";
 
@@ -39,8 +40,8 @@ export function SampleVoices(props: {
 
   return (
     <main className="page narrow-page">
+      <SampleNotice />
       <Steps current={0} />
-      <span className="sample-tag">Sample · no microphone used</span>
       <h1 className="step-title">Who's here?</h1>
       <blockquote className="script">{SENTENCE}</blockquote>
       <section className="panel attendee-panel">
@@ -114,8 +115,8 @@ export function SampleConnect(props: { onBack: () => void; onStart: () => void }
 
   return (
     <main className="page narrow-page">
+      <SampleNotice />
       <Steps current={1} />
-      <span className="sample-tag">Sample · no microphone used</span>
       <h1 className="step-title">Connect</h1>
       <section className="panel">
         <SampleSource icon={<MicrophoneIcon size={24} />} title="Room mic" state={mic} onConnect={() => connect(setMic)} />

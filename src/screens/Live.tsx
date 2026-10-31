@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { CircleNotchIcon, FastForwardIcon, PauseIcon, PictureInPictureIcon, PlayIcon, StopIcon, WarningIcon } from "@phosphor-icons/react";
 import { SpeakerSelect, whoStyle, NameVoice } from "../components/people";
+import { SampleNotice } from "../components/SampleNotice";
 import type { Engine } from "../engine/types";
 import { correctSpeaker, loadMeeting, mergeSegment, request, roomPath } from "../lib/api";
 import { loadPeople } from "../lib/peopleStore";
@@ -198,6 +199,7 @@ export function Live(props: {
 
   const panel = (
     <div className="live">
+      {props.isSample && <SampleNotice />}
       <header className="live-head">
         <span className={`status ${status}`}>
           <i /> {statusText[status]}
@@ -214,7 +216,6 @@ export function Live(props: {
           </button>
         )}
       </header>
-      {props.isSample && <span className="sample-tag">Sample</span>}
       {message && <p className="alert" role="alert">{message}</p>}
       {engineLost && !ended && (
         <p className="alert" role="alert"><WarningIcon /> Engine stopped. Lines saved.</p>
