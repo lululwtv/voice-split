@@ -212,11 +212,22 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
 
       <section className="pitch-section" data-thread="section">
         <h2>What we uncovered, and what we built</h2>
-        <p>Speaker identification is usually two layers stacked: <b>diarization</b> (when the voice changes) and <b>enrollment</b> (matching a voice to a known print). timbre rebuilds them from open parts and aims at the shared mic.</p>
+        <p>Speaker identification is usually two layers stacked: <b>diarization</b> (when the voice changes) and <b>enrollment</b> (matching a voice to a known print).</p>
+        <p>Timbre transcribes meetings and uses voice matching to identify checked-in participants. When the evidence is unclear, it labels the voice as unknown instead of forcing a name.</p>
         <ol className="how-steps">
-          <li><span>01</span><div><h3>Enroll each voice once</h3><p>Everyone reads one sentence. Resemblyzer turns it into a voice embedding, a numeric fingerprint.</p></div></li>
-          <li><span>02</span><div><h3>Transcribe the mixed audio</h3><p>Whisper handles what was said. One laptop mic, everyone in the room, one channel.</p></div></li>
-          <li><span>03</span><div><h3>Attribute every line to a name</h3><p>Each segment is matched to the closest enrolled print. The transcript comes out labelled by person, not "Speaker 1."</p></div></li>
+          <li><span>01</span><div><h3>Transcribe the conversation</h3><p>Convert meeting audio into text with word-level timestamps.</p></div></li>
+          <li><span>02</span><div><h3>Compare voices</h3><p>Match speech against saved voice profiles, checking both similarity and competing matches.</p></div></li>
+          <li><span>03</span><div><h3>Assign a speaker</h3><p>Show a participant's name when the evidence meets the matching criteria, or use an unknown-speaker label.</p></div></li>
+        </ol>
+      </section>
+
+      <section className="pitch-section" data-thread="section">
+        <h2>Built for real conversations</h2>
+        <ol className="conversation-points">
+          <li><h3>Recognise unfamiliar voices</h3><p>Distinct unfamiliar voices receive labels such as "Unknown speaker 1" and "Unknown speaker 2." These labels are saved within the meeting and reused when matching evidence is strong enough.</p></li>
+          <li><h3>Make uncertainty visible</h3><p>Voice matches carry High, Medium or Low confidence labels. Uncertain matches and unavailable voice evidence are clearly marked. These labels describe matching strength, not guaranteed accuracy.</p></li>
+          <li><h3>Keep corrections in your control</h3><p>Users can correct individual speaker assignments. Manual corrections are saved and protected from automatic overwrites.</p></li>
+          <li><h3>Keep records consistent</h3><p>Speaker labels remain consistent across the live transcript, saved meeting history and exports.</p></li>
         </ol>
       </section>
 
@@ -265,11 +276,11 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <section className="pitch-section" data-thread="section">
         <h2>Not a demo script. A tested system.</h2>
         <div className="stats two">
-          <div><strong>85</strong><span>backend tests passing</span></div>
-          <div><strong>40</strong><span>frontend tests passing, production build passing</span></div>
+          <div><strong>109/113</strong><span>backend tests passing</span></div>
+          <div><strong>62</strong><span>frontend tests passing, production build passing</span></div>
         </div>
-        <p>Tests cover weak and ambiguous matches, unchecked-speaker competition, unknown-identity persistence, per-meeting isolation, correction persistence and export labels.</p>
-        <p className="limit"><b>Honest limit:</b> real-meeting calibration is still pending, and short clips, noise or overlapping speech can still split one person into two identities. We scoped that out to nail single-channel attribution first.</p>
+        <p>The initial implementation is complete. Real-meeting calibration is the next step, to assess performance and refine matching thresholds.</p>
+        <p className="limit"><b>What we're refining:</b> short replies, background noise, overlapping speech and similar voices can still cause attribution errors. Correcting one segment currently updates that segment only. It doesn't rename an entire speaker group or train the saved voice profile.</p>
       </section>
 
       <section className="pitch-section" data-thread="section">
@@ -287,7 +298,7 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
       <section className="pitch-section closing" data-thread="section">
         <h2>Open source</h2>
         <p>The code is public and reusable.</p>
-        <p className="foot center">MIT · Resemblyzer (Apache-2.0) · Whisper (MIT)</p>
+        <p className="foot center">MIT · SpeechBrain (Apache-2.0) · Whisper (MIT)</p>
         <a className="btn primary large repo" data-thread="end" href={REPO} target="_blank" rel="noreferrer">
           <GithubLogoIcon size={18} /> View on GitHub
         </a>

@@ -392,6 +392,8 @@ tbody th { font-weight: 600; white-space: nowrap; }
 .memory-flow p { font-size: .9rem; }
 .eyebrow { font-size: .75rem !important; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
 .agents h2 { max-width: 860px; }
+.conversation-points { display: grid; grid-template-columns: repeat(2, 1fr); gap: 28px; margin-top: 8px; }
+.conversation-points h3 { margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; color: var(--ink); text-transform: none; }
 .agent-points { display: grid; grid-template-columns: repeat(3, 1fr); gap: 28px; margin-top: 8px; }
 .agent-points h3 { margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; color: var(--ink); text-transform: none; }
 .limit { padding-top: 14px; border-top: 1px solid var(--line); color: var(--muted); }
@@ -407,7 +409,7 @@ tbody th { font-weight: 600; white-space: nowrap; }
   .scene, .scene-call { grid-template-columns: 1fr; gap: 24px; min-height: 0; }
   .call-person { width: 48px; height: 48px; top: 130px; }
   .tile { height: 300px; }
-  .stats, .stats.two, .memory-flow, .agent-points { grid-template-columns: 1fr; }
+  .stats, .stats.two, .memory-flow, .agent-points, .conversation-points { grid-template-columns: 1fr; }
   .bubble { font-size: .7rem; padding: 5px 6px; }
   .review-grid, .journey { grid-template-columns: 1fr; gap: 24px; }
   .side { position: static; }
