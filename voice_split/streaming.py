@@ -2,7 +2,7 @@ import uuid
 
 import numpy as np
 from .identification import identify_speaker
-from .turns import identify_turns
+from .turns import identify_turns, identify_meeting_turns
 
 
 def recognize_window(engines, profiles, state, samples, start, final=False):
@@ -11,7 +11,7 @@ def recognize_window(engines, profiles, state, samples, start, final=False):
                              lambda speech: identify_speaker(engines, profiles, speech))
 
 
-def recognize_window_ranked(engines, profiles, state, samples, start, final=False, participant_ids=(), matcher=None):
+def recognize_window_ranked(engines, profiles, state, samples, start, final=False, participant_ids=(), matcher=None, session=None):
     prefix = state.context
     audio = np.concatenate([prefix, samples])
     if not len(audio):
@@ -22,8 +22,10 @@ def recognize_window_ranked(engines, profiles, state, samples, start, final=Fals
     emitted_until = state.emitted_until
     last_word = getattr(state, "last_word", None)
     for row in engines.transcribe(audio):
+        # A word mostly before the emitted boundary is a re-decode, even if spelled differently.
         words = [word for word in row.get("words", [])
                  if origin + word["end"] > emitted_until + .02
+                 and origin + (word["start"] + word["end"]) / 2 > emitted_until - .15
                  and origin + (word["start"] + word["end"]) / 2 <= cutoff]
         while words and last_word == words[0]["word"].casefold().strip(" .,!?;:\"'") and origin + words[0]["start"] < emitted_until:
             words.pop(0)
@@ -31,9 +33,11 @@ def recognize_window_ranked(engines, profiles, state, samples, start, final=Fals
             stable.append({**row, "words": words})
             emitted_until = max(emitted_until, origin + words[-1]["end"])
             last_word = words[-1]["word"].casefold().strip(" .,!?;:\"'")
+    turns = (identify_meeting_turns(engines, profiles, audio, stable, participant_ids, session, origin)
+             if session else identify_turns(engines, profiles, audio, stable, participant_ids, matcher))
     output = [{**turn, "id": uuid.uuid4().hex, "revision": 0,
                "start": max(0, origin + turn["start"]), "end": origin + turn["end"]}
-              for turn in identify_turns(engines, profiles, audio, stable, participant_ids, matcher)]
+              for turn in turns]
     state.emitted_until = emitted_until
     state.last_word = last_word
     state.context = audio[-32000:].copy()

@@ -114,7 +114,11 @@ class CoreRoomStore(RoomStore):
                 (room_id,),
             ).fetchone()
             previous = self._normalize(json.loads(row[0])) if row else None
-            if (previous and (incoming.get("profile_id") or incoming.get("unknown_id"))
+            identified = incoming.get("profile_id") or incoming.get("unknown_id")
+            # Pending rows join only their own track, which later resolves as one identity.
+            # Re-decoded word timestamps can overlap the previous row slightly.
+            if (previous and (identified or (incoming.get("track_id")
+                                             and previous.get("track_id") == incoming["track_id"]))
                     and previous["assignment_source"] == incoming["assignment_source"]
                     and incoming["assignment_source"] in {"automatic", "unassigned"}
                     and previous["profile_id"] == incoming["profile_id"]
@@ -122,7 +126,7 @@ class CoreRoomStore(RoomStore):
                     and incoming.get("stream_id")
                     and previous.get("stream_id") == incoming["stream_id"]
                     and previous.get("device_id") == incoming.get("device_id")
-                    and 0 <= incoming["start"] - previous["end"] <= .8
+                    and -.3 <= incoming["start"] - previous["end"] <= .8
                     and incoming["end"] - previous["start"] <= 20):
                 # Retain the weakest evidence for the combined turn, not an inflated score.
                 evidence = min((previous, incoming), key=evidence_strength)
@@ -135,6 +139,33 @@ class CoreRoomStore(RoomStore):
             db.execute("INSERT INTO segments VALUES (?,?,?)",
                        (incoming["id"], room_id, json.dumps(incoming)))
         return incoming
+
+    def resolve_track(self, room_id, stream_id, track_id, identity):
+        """Resolve only provisional rows from this recording; preserve corrections."""
+        if not stream_id or not track_id or not (identity.get("profile_id") or identity.get("unknown_id")):
+            return []
+        changed = []
+        with self.connection() as db:
+            db.execute("BEGIN IMMEDIATE")
+            self._require_room(db, room_id)
+            if identity.get("profile_id") and identity["profile_id"] not in self._roster(db, room_id)["participant_ids"]:
+                return []
+            for (payload,) in db.execute("SELECT payload FROM segments WHERE room_id=?", (room_id,)).fetchall():
+                segment = self._normalize(json.loads(payload))
+                if (segment.get("stream_id") != stream_id or segment.get("track_id") != track_id
+                        or segment["assignment_source"] != "unassigned"
+                        or segment.get("profile_id") or segment.get("unknown_id")):
+                    continue
+                evidence = {**identity.get("identification", {}), "reason": "accumulated_speech",
+                            "speech_seconds": round(segment["end"] - segment["start"], 3)}
+                segment.update({key: identity.get(key) for key in
+                                ("speaker", "profile_id", "unknown_id", "score", "assignment_source")})
+                segment.update(identification=evidence, revision=segment["revision"] + 1)
+                segment = self._apply_voice_name(db, room_id, segment)
+                db.execute("UPDATE segments SET payload=? WHERE room_id=? AND id=?",
+                           (json.dumps(segment), room_id, segment["id"]))
+                changed.append(segment)
+        return changed
 
     @staticmethod
     def _apply_voice_name(db, room_id, segment):

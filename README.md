@@ -23,6 +23,8 @@ Open http://127.0.0.1:4320. Omit `VOICE_SPLIT_ASR_BACKEND=mlx` for the CPU engin
 
 Bug reports, ideas and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for setup, checks and how to submit a change.
 
+The [technical requirements and proposed design](TRD.md) describe the architecture, enrollment prompts, filler-word handling and validation plan. Proposed features are distinguished from current behavior.
+
 Timbre is available under the [MIT license](LICENSE).
 
 ## Local data
