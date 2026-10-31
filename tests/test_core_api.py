@@ -1,3 +1,4 @@
+import asyncio
 import importlib
 import io
 import sys
@@ -113,12 +114,19 @@ def test_roster_validation_and_cross_room_correction(core_client):
 def test_unknown_labels_survive_uploads_and_export(core_client, monkeypatch):
     client, server, room, first, second, audio = core_client
     base = f"/api/v2/rooms/{room}"
+    # Durable unknown identities now require accumulated speech, not the .25s fixture.
+    monkeypatch.setattr(server.engines, "transcribe", lambda samples: [
+        {"start": 0, "end": 3, "text": "Longer speech", "words": [
+            {"start": 0, "end": 3, "word": "Longer speech"}]}])
+    recording = io.BytesIO()
+    sf.write(recording, .1 * np.sin(np.arange(48000) * .1), 16000, format="WAV")
+    audio = recording.getvalue()
     def upload():
         return client.post(base + "/transcribe", files={"file": ("voice.wav", audio)}).json()["segments"][0]
     one, again = upload(), upload()
     assert one["speaker"] == again["speaker"] == "Unknown speaker 1"
     assert one["profile_id"] is None
-    monkeypatch.setattr(server.engines, "embed", lambda audio: np.array([1., 0.]))
+    monkeypatch.setattr(server.engines, "embed", lambda audio: np.array([-.8, .6]))
     two = upload()
     assert two["speaker"] == "Unknown speaker 2"
     assert "Unknown speaker 2" in client.get(base + "/export?format=text").text
@@ -149,6 +157,30 @@ def test_upload_splits_two_speakers_inside_one_asr_row(core_client, monkeypatch)
     rows = result.json()["segments"]
     assert [(row["speaker"], row["text"]) for row in rows] == [("Alex", "One two"), ("Sam", "three four")]
     assert client.get(base + "/segments").json()["segments"] == rows
+
+
+def test_final_flush_keeps_the_existing_microphone_session(core_client, monkeypatch):
+    client, server, room_id, _, _, _ = core_client
+    room = server.RoomAudio()
+    room.core, room.last_device = True, "microphone"
+    session = server.MeetingStream(server.meeting_matcher, room_id)
+    room.speaker_session = session
+    seen = []
+    def recognize(*args, **kwargs):
+        seen.append(kwargs["session"])
+        return []
+    monkeypatch.setattr(server, "recognize_window_ranked", recognize)
+    async def flush():
+        await room.queue.put((None, np.empty(0), 3., True))
+        worker = asyncio.create_task(server.process_room(room_id, room))
+        await room.queue.join()
+        worker.cancel()
+        try:
+            await worker
+        except asyncio.CancelledError:
+            pass
+    asyncio.run(flush())
+    assert seen == [session]
 
 
 def test_live_short_matching_and_correction_broadcast(core_client):

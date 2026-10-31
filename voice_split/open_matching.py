@@ -26,16 +26,36 @@ class MeetingMatcher:
                 db.execute("ALTER TABLE unknown_voices ADD COLUMN model TEXT NOT NULL DEFAULT 'speechbrain/spkrec-ecapa-voxceleb'")
 
     def identify(self, room_id, samples, participant_ids):
+        return self._identify(room_id, samples, participant_ids, create_unknown=True)
+
+    def assess(self, room_id, samples, participant_ids):
+        """Read identity evidence without creating a reference from a short probe."""
+        return self._identify(room_id, samples, participant_ids, create_unknown=False)
+
+    def identify_stream(self, room_id, samples, participant_ids):
+        """Allow mature, separated unknown evidence; defer borderline new identities."""
+        return self._identify(room_id, samples, participant_ids, create_unknown=True, mature=True)
+
+    def assess_scores(self, samples, participant_ids):
+        return self._identify(None, samples, participant_ids, create_unknown=False, include_scores=True,
+                              base_threshold=.35)
+
+    def _identify(self, room_id, samples, participant_ids, *, create_unknown, mature=False, include_scores=False,
+                  base_threshold=None):
         samples = np.asarray(samples)
         if samples.ndim != 1:
             samples = np.empty(0)
         duration = len(samples) / 16000
-        threshold = round(min(1., self.threshold + (.05 if duration < .5 else 0)), 6)
+        threshold = round(min(1., (self.threshold if base_threshold is None else base_threshold)
+                              + (.05 if duration < .5 else 0)), 6)
         info = dict(reason="embedding_unavailable", confidence="unavailable", speech_seconds=round(duration, 3),
                     candidate=None, candidate_profile_id=None, margin=None, threshold=threshold,
                     min_margin=self.margin, calibrated=False)
         result = dict(speaker="Unknown speaker", profile_id=None, unknown_id=None, score=None,
                       assignment_source="unassigned", identification=info)
+        saved = self.profiles.list()
+        if include_scores:
+            result["scores"] = [dict(profile_id=p["id"], speaker=p["name"], score=None) for p in saved]
         if not len(samples) or not np.isfinite(samples).all() or not np.any(samples):
             return result
         try:
@@ -43,11 +63,15 @@ class MeetingMatcher:
         except (ValueError, RuntimeError):
             return result
         # Unchecked saved voices are negative evidence, never named participants.
-        saved = self.profiles.list()
         ranked = self.profiles.rank(vector, [p["id"] for p in saved])
+        if include_scores:
+            compatible = {p["profile_id"] for p in ranked}
+            result["scores"] = ranked + [p for p in result["scores"] if p["profile_id"] not in compatible]
         eligible = [p for p in ranked if p["profile_id"] in participant_ids]
         with self.store.connection() as db:
             unknown_scores = self._scores(db, room_id, vector)
+        unknown_acceptance = self.threshold if mature and duration >= 3 else self.unknown_threshold
+        identity_margin = max(.15, self.margin) if mature and duration >= 3 else self.margin
         if eligible:
             best = eligible[0]
             rivals = [p["score"] for p in ranked if p["profile_id"] != best["profile_id"]]
@@ -57,12 +81,12 @@ class MeetingMatcher:
             # A strong saved reference can resolve an earlier unknown identity. A
             # borderline named match must not displace substantially better unknown evidence.
             unknown_wins = (unknown_scores and best["score"] < STRONG_MATCH
-                            and unknown_scores[0][0] >= self.unknown_threshold
-                            and unknown_scores[0][0] - best["score"] >= self.margin)
+                            and unknown_scores[0][0] >= unknown_acceptance
+                            and unknown_scores[0][0] - best["score"] >= identity_margin)
             info.update(unknown_similarity=unknown_scores[0][0] if unknown_scores else None)
             if (unknown_scores and threshold <= best["score"] < STRONG_MATCH
-                    and unknown_scores[0][0] >= self.unknown_threshold
-                    and abs(best["score"] - unknown_scores[0][0]) < self.margin):
+                    and unknown_scores[0][0] >= unknown_acceptance
+                    and abs(best["score"] - unknown_scores[0][0]) < identity_margin):
                 info.update(reason="ambiguous_identity", confidence="low")
                 return result
             if best["score"] >= threshold and (margin is None or margin >= self.margin) and not unknown_wins:
@@ -76,6 +100,17 @@ class MeetingMatcher:
                 info["reason"] = "no_compatible_profiles"
                 return result
             info["reason"] = "no_participants"
+        if not create_unknown:
+            return result
+        if mature and unknown_scores and .45 <= unknown_scores[0][0] < self.unknown_threshold:
+            similarity, number = unknown_scores[0]
+            gap = similarity - unknown_scores[1][0] if len(unknown_scores) > 1 else None
+            if duration >= 3 and similarity >= self.threshold and (gap is None or gap >= max(.15, self.margin)):
+                info.update(reason="mature_unknown_match", confidence="low", unknown_similarity=similarity)
+                result.update(speaker=f"Unknown speaker {number}", unknown_id=f"unknown-{number}")
+            else:
+                info.update(reason="ambiguous_unknown", confidence="unavailable", unknown_similarity=similarity)
+            return result
         number, similarity = self._unknown(room_id, vector)
         if number is not None:
             result.update(speaker=f"Unknown speaker {number}", unknown_id=f"unknown-{number}")

@@ -17,11 +17,12 @@ from .engines import AudioEngines
 from .profiles import ProfileStore
 from .rooms import RoomAudio, RoomStore
 from .streaming import recognize_window
-from .identification import enrollment_reference, identify_speaker
-from .turns import identify_turns
+from .identification import enrollment_reference, identify_speaker, speech_samples
+from .turns import identify_turns, identify_meeting_turns
 from .streaming import recognize_window_ranked
 from .core_rooms import CoreRoomStore, ConflictError
 from .open_matching import MeetingMatcher
+from .meeting_stream import MeetingStream
 
 VERSION = "0.3.0"
 ROOT = Path(__file__).resolve().parent.parent
@@ -122,6 +123,28 @@ def status():
 @app.get("/api/profiles")
 def list_profiles():
     return profiles.list()
+
+
+def assess_voice(samples):
+    """Test one speaker against saved profiles without creating meeting references."""
+    participants = [profile["id"] for profile in profiles.list()]
+    speech = speech_samples(samples, engines.transcribe(samples)) if participants else np.empty(0)
+    result = meeting_matcher.assess_scores(speech, participants)
+    if not participants:
+        result["identification"]["reason"] = "no_profiles"
+    elif not len(speech):
+        result["identification"]["reason"] = "no_speech"
+    if not result.get("profile_id"):
+        result["speaker"] = "Unknown"
+    return result
+
+
+@app.post("/api/voice-test")
+async def test_voice(file: UploadFile = File(...)):
+    require_ready()
+    samples = await read_audio(file)
+    async with inference_lock:
+        return await asyncio.to_thread(assess_voice, samples)
 
 
 @app.post("/api/profiles")
@@ -301,9 +324,13 @@ def export_meeting(room_id: str, format: str = "json"):
 
 def recognize_ranked(samples, participant_ids, room_id=None):
     rows = engines.transcribe(samples)
+    if room_id:
+        session = MeetingStream(meeting_matcher, room_id)
+        turns = identify_meeting_turns(engines, profiles, samples, rows, participant_ids, session)
+    else:
+        turns = identify_turns(engines, profiles, samples, rows, participant_ids)
     return [{"id": uuid.uuid4().hex, "revision": 0, "learning_status": "unavailable", **turn}
-            for turn in identify_turns(engines, profiles, samples, rows, participant_ids,
-                (lambda clip: meeting_matcher.identify(room_id, clip, participant_ids)) if room_id else None)]
+            for turn in turns]
 
 
 def persist_core_segment(room_id, row, *, live=False):
@@ -352,9 +379,17 @@ async def process_room(room_id, room):
             async with inference_lock:
                 if getattr(room, "core", False):
                     roster = core_meetings.roster(room_id)["participant_ids"]
+                    if not getattr(room, "speaker_session", None) or (device is not None and room.last_device and device != room.last_device):
+                        room.speaker_session = MeetingStream(meeting_matcher, room_id)
+                        room.speaker_session.source_start = start
                     segments = await asyncio.to_thread(recognize_window_ranked, engines, profiles, room,
                                                        samples, start, final, participant_ids=roster,
-                                                       matcher=lambda clip: meeting_matcher.identify(room_id, clip, roster))
+                                                       session=room.speaker_session)
+                    for track, identity in room.speaker_session.take_resolutions().items():
+                        if identity.get("profile_id") and identity["profile_id"] not in {p["id"] for p in profiles.list()}:
+                            continue
+                        for revised in core_meetings.resolve_track(room_id, room.stream_id, track, identity):
+                            await broadcast(room, revised)
                 else:
                     segments = await asyncio.to_thread(recognize_window, engines, profiles, room, samples, start, final)
             room.last_device = device or room.last_device
@@ -367,6 +402,7 @@ async def process_room(room_id, room):
                 await broadcast(room, event)
         except Exception:
             room.context = np.empty(0, dtype=np.float32)
+            room.speaker_session = None
             logger.exception("Room transcription failed")
             await broadcast(room, {"type": "error", "message": "This audio window could not be transcribed. Please retry."})
         finally:

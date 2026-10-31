@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ArrowRightIcon, CheckIcon, PlusIcon, TrashIcon } from "@phosphor-icons/react";
 import { Enroll } from "../components/Enroll";
+import { TestVoice } from "../components/TestVoice";
 import { Steps } from "../components/Steps";
 import { loadPeople, removePerson, savePerson } from "../lib/peopleStore";
 import { request, roomPath } from "../lib/api";
@@ -11,6 +12,7 @@ export function Attendees(props: { roomId?: string; startEnrollment?: boolean; o
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [replacing, setReplacing] = useState<Person | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
@@ -37,11 +39,12 @@ export function Attendees(props: { roomId?: string; startEnrollment?: boolean; o
     <section className="panel attendee-panel">
       {people.length > 0 && <ul className="attendees">{people.map((p) => <li key={p.id}>
         <label><input type="checkbox" checked={selected.has(p.id)} onChange={() => toggle(p.id)} /><span className="tick" aria-hidden><CheckIcon weight="bold" /></span><strong>{p.name}</strong></label>
-        <button className="btn" disabled={busy} onClick={() => { setReplacing(p); setAdding(true); }}>Re-record</button>
+        <button className="btn" disabled={busy} onClick={() => { setTesting(false); setReplacing(p); setAdding(true); }}>Re-record</button>
         <button className="icon-btn" disabled={busy} aria-label={`Delete ${p.name}'s voice`} onClick={() => remove(p.id)}><TrashIcon /></button>
       </li>)}</ul>}
       {error && <p className="error" role="alert">{error}</p>}
-      {adding ? <Enroll key={replacing?.id ?? "new"} initialPerson={replacing ?? undefined} onAdd={add} onCancel={() => { setAdding(false); setReplacing(null); }} /> :
+      {loaded && !testing && <button className="btn" disabled={busy} onClick={() => { setAdding(false); setReplacing(null); setTesting(true); }}>Test voice</button>}
+      {testing ? <TestVoice hasProfiles={people.length > 0} onCancel={() => setTesting(false)} /> : adding ? <Enroll key={replacing?.id ?? "new"} initialPerson={replacing ?? undefined} onAdd={add} onCancel={() => { setAdding(false); setReplacing(null); }} /> :
         loaded && <button className="btn" onClick={() => setAdding(true)}><PlusIcon /> Add saved voice</button>}
     </section>
     <div className="step-nav"><button className="btn" onClick={props.onBack}>Back</button><button className="btn primary" disabled={!loaded || busy} onClick={() => props.onNext(chosen)}>Continue {chosen.length ? `with ${chosen.length}` : "without saved voices"} <ArrowRightIcon /></button></div>
