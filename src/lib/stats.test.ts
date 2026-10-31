@@ -4,6 +4,7 @@ import { liveStatus } from "./liveStatus";
 import { createSimulatedEngine } from "../engine/simulatedEngine";
 import type { Segment } from "../types";
 import { toMarkdown } from "./export";
+import { buildPayload, isValidTarget, publishItems, type PublishSettings } from "./publish";
 import { formatTime, labelAccuracy, talkTime } from "./stats";
 
 const line = (over: Partial<Segment>): Segment => ({
@@ -80,4 +81,36 @@ describe("liveStatus", () => {
     expect(liveStatus({ ...base, ended: true, engineLost: true })).toBe("finished");
   });
   it("does not call a paused meeting quiet", () => expect(liveStatus({ ...base, paused: true, silentSeconds: 99 })).toBe("paused"));
+});
+
+describe("publish payload", () => {
+  const { people, segments, windows, duration } = buildSampleMeeting();
+  const meeting = { title: "T", isSample: true, people, segments, windows, duration, summary: sampleSummary };
+  const settings: PublishSettings = { destination: "github", github: " team/memory ", notion: "", auto: false };
+
+  it("sends only what was selected and leaves the transcript out by default", () => {
+    const payload = buildPayload(meeting, settings, new Set(["decision-0", "action-1"]), false, "2026-10-31");
+    expect(payload.items.map((i) => i.id)).toEqual(["decision-0", "action-1"]);
+    expect(payload.target).toBe("team/memory");
+    expect(payload.markdown).toContain("**Dowon:** Send the final screenshots, by Monday");
+    expect(payload.markdown).not.toContain("Transcript");
+    expect(payload.markdown).not.toContain("Wei Ming owns");
+  });
+
+  it("includes the transcript only when asked", () => {
+    const payload = buildPayload(meeting, settings, new Set(), true, "2026-10-31");
+    expect(payload.markdown).toContain("## Transcript");
+    expect(payload.markdown).toContain("Unknown speaker");
+  });
+
+  it("has nothing to publish without a summary", () => {
+    expect(publishItems({ ...meeting, summary: null })).toEqual([]);
+  });
+
+  it("checks the target for each destination", () => {
+    expect(isValidTarget("github", "owner/repo")).toBe(true);
+    expect(isValidTarget("github", "https://github.com/owner/repo")).toBe(false);
+    expect(isValidTarget("notion", "abc123")).toBe(true);
+    expect(isValidTarget("notion", "  ")).toBe(false);
+  });
 });

@@ -4,6 +4,8 @@ import { HERO_LANE_START, HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit
 const GUTTER = 56;
 const CORNER = 16;
 const BEND = 90;
+/** The person icon has empty space under its shoulders, so the line starts inside the box. */
+const FIGURE_FOOT = 9;
 const INPUT_SPREAD = 14;
 const NARROW_RAIL = 14;
 const WIDE_ENOUGH = 1000;
@@ -54,7 +56,7 @@ function buildPaths(root: HTMLElement) {
     const x = (v.left + v.right) / 2;
     const landing = startX + (i - (roomVoices.length - 1) / 2) * INPUT_SPREAD;
     const bend = mic.top - BEND;
-    return `M${x} ${v.bottom} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
+    return `M${x} ${v.bottom - FIGURE_FOOT} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
   });
 
   // One grey line: out of the laptop, down through the story, into the mixed signal.
@@ -79,7 +81,7 @@ function buildPaths(root: HTMLElement) {
   const ownRail = left + OWN_LINE_INSET;
   const ownLane = heroY(LANE_YS[0]);
   const ownLine = [
-    `M${ownX} ${own.bottom}`,
+    `M${ownX} ${own.bottom - FIGURE_FOOT}`,
     `L${ownX} ${ownTurn - CORNER}`,
     `Q${ownX} ${ownTurn} ${ownX - CORNER} ${ownTurn}`,
     `L${ownRail + CORNER} ${ownTurn}`,

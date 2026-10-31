@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ArrowRightIcon, CheckCircleIcon, GithubLogoIcon, QuestionIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, CheckCircleIcon, GithubLogoIcon, QuestionIcon, UserIcon } from "@phosphor-icons/react";
 import { HeroSplit } from "../components/HeroSplit";
 import { Thread } from "../components/Thread";
 import { TypingBubble } from "../components/TypingBubble";
@@ -48,10 +48,10 @@ function Room() {
         <rect x="1" y="1" width="413" height="328" rx="20" className="art-room" />
         <ellipse cx="205" cy="232" rx="180" ry="48" className="art-table" />
         <rect x="442" y="205" width="88" height="46" rx="6" className="art-table" />
-        <circle data-thread="voice" cx="67" cy="125" r="15" fill={EDRIC} />
-        <circle data-thread="voice" cx="190" cy="125" r="15" fill={DOWON} />
-        <circle data-thread="voice" cx="314" cy="125" r="15" fill={WEI_MING} />
-        <circle data-thread="voice" cx="484" cy="125" r="15" fill={YOUNGJIN} />
+        <UserIcon data-thread="voice" x={37} y={88} size={60} weight="fill" color={EDRIC} />
+        <UserIcon data-thread="voice" x={160} y={88} size={60} weight="fill" color={DOWON} />
+        <UserIcon data-thread="voice" x={284} y={88} size={60} weight="fill" color={WEI_MING} />
+        <UserIcon data-thread="voice" x={454} y={88} size={60} weight="fill" color={YOUNGJIN} />
         <text x="90" y="312" className="art-text muted-text">Meeting room</text>
         <text x="494" y="312" className="art-text muted-text">Remote</text>
       </svg>

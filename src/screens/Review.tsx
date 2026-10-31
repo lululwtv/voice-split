@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CaretDownIcon, DownloadSimpleIcon, PauseIcon, PlayIcon, UsersThreeIcon, WarningCircleIcon } from "@phosphor-icons/react";
 import { colorOf, SpeakerSelect, whoStyle } from "../components/people";
+import { PublishPanel } from "../components/PublishPanel";
 import { SummaryView } from "../components/SummaryView";
 import { download, toJson, toMarkdown } from "../lib/export";
 import { formatTime, labelAccuracy, talkTime } from "../lib/stats";
@@ -74,7 +75,7 @@ function WhyPanel({ segment, people }: { segment: Segment; people: Person[] }) {
 }
 
 export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: Meeting) => void }) {
-  const [tab, setTab] = useState<"summary" | "transcript" | "notes">("summary");
+  const [tab, setTab] = useState<"summary" | "transcript" | "notes" | "publish">("summary");
   const [jumpTo, setJumpTo] = useState<string | null>(null);
   const [time, setTime] = useState(0);
   const [playing, setPlaying] = useState(false);
@@ -169,9 +170,12 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
             <button role="tab" aria-selected={tab === "summary"} onClick={() => setTab("summary")}>Summary</button>
             <button role="tab" aria-selected={tab === "transcript"} onClick={() => setTab("transcript")}>Transcript</button>
             <button role="tab" aria-selected={tab === "notes"} onClick={() => setTab("notes")}>Notes by person</button>
+            <button role="tab" aria-selected={tab === "publish"} onClick={() => setTab("publish")}>Publish</button>
           </div>
           {tab === "summary" ? (
             <SummaryView meeting={meeting} onJump={showLine} />
+          ) : tab === "publish" ? (
+            <PublishPanel meeting={meeting} />
           ) : tab === "transcript" ? (
             <ol className="transcript">
               {segments.map((s) => {

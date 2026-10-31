@@ -103,6 +103,34 @@ Sent after `ended`. If it can't be written, send `{ "type": "summary_failed" }`.
 
 `start`, `pause`, `resume`, `finish` (send what's left, then `ended`, then `summary`) and `stop`.
 
+## Publishing to GitHub and Notion
+
+The Publish tab is built. Nothing is sent until the backend exists and `createRealPublisher` in `src/lib/publish.ts` is set.
+
+`POST /publish`
+
+```json
+{
+  "destination": "github",
+  "target": "owner/repo",
+  "title": "Launch planning",
+  "date": "2026-10-31",
+  "items": [
+    { "id": "action-1", "type": "action", "text": "Send the final screenshots", "owner": "Dowon", "due": "Monday", "sourceTimes": ["01:02"] }
+  ],
+  "transcriptIncluded": false,
+  "markdown": "# Launch planning..."
+}
+```
+
+Respond with `{ "url": "https://..." }`, a link to what was created. Any error status shows a retry in the UI.
+
+- `target` is `owner/repo` for GitHub, and a database link or ID for Notion.
+- `type` is `overview`, `decision`, `action` or `question`.
+- `transcriptIncluded` is off by default. Voice recordings and voiceprints are never in this request.
+- GitHub and Notion credentials stay on the backend. The frontend never asks for or stores a token.
+- "Publish automatically after every meeting" is saved in the browser and stays disabled until the backend is connected. The backend needs to define how it receives this setting.
+
 ## Open questions for the engine
 
 - Can Whisper and Resemblyzer keep up on one laptop during a video call? This is the biggest risk, and it should be measured before more UI work.
