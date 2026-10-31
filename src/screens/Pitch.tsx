@@ -1,5 +1,5 @@
 import { useRef } from "react";
-import { ArrowRightIcon, CheckCircleIcon, GithubLogoIcon, QuestionIcon, UserIcon } from "@phosphor-icons/react";
+import { ArrowRightIcon, CheckCircleIcon, GithubLogoIcon, MicrophoneIcon, PhoneDisconnectIcon, QuestionIcon, UserIcon, UsersIcon, VideoCameraIcon } from "@phosphor-icons/react";
 import { HeroSplit } from "../components/HeroSplit";
 import { Thread } from "../components/Thread";
 import { TypingBubble } from "../components/TypingBubble";
@@ -36,25 +36,40 @@ function Source({ href, children }: { href: string; children: string }) {
   return <a className="source-link" href={href} target="_blank" rel="noreferrer">{children}</a>;
 }
 
-function Room() {
+function Person({ color, className }: { color: string; className: string }) {
+  return <UserIcon data-thread="voice" className={`call-person ${className}`} size={84} weight="fill" color={color} aria-hidden />;
+}
+
+function VideoCall() {
   return (
-    <div className="scene-art room">
-      <TypingBubble className="at-1" who="Edric" text="Can we ship by Friday?" color={EDRIC} />
-      <TypingBubble className="at-2" who="Dowon" text="If the tests pass." color={DOWON} delayMs={1100} />
-      <TypingBubble className="at-3" who="Wei Ming" text="I'll own the API migration." color={WEI_MING} delayMs={2000} />
-      <TypingBubble className="at-4" who="Youngjin" text="I'll send the notes." color={YOUNGJIN} delayMs={3200} />
-      <svg viewBox="0 0 560 330" role="img" aria-label="Edric, Dowon and Wei Ming share a meeting room. Youngjin is next door, in a separate room with their own desk.">
-        <rect x="414" y="1" width="145" height="328" rx="20" className="art-other-room" />
-        <rect x="1" y="1" width="413" height="328" rx="20" className="art-room" />
-        <ellipse cx="205" cy="232" rx="180" ry="48" className="art-table" />
-        <rect x="442" y="205" width="88" height="46" rx="6" className="art-table" />
-        <UserIcon data-thread="voice" x={37} y={88} size={60} weight="fill" color={EDRIC} />
-        <UserIcon data-thread="voice" x={160} y={88} size={60} weight="fill" color={DOWON} />
-        <UserIcon data-thread="voice" x={284} y={88} size={60} weight="fill" color={WEI_MING} />
-        <UserIcon data-thread="voice" x={454} y={88} size={60} weight="fill" color={YOUNGJIN} />
-        <text x="90" y="312" className="art-text muted-text">Meeting room</text>
-        <text x="494" y="312" className="art-text muted-text">Remote</text>
-      </svg>
+    <div className="call" role="group" aria-label="A video call with two tiles. Edric, Dowon and Wei Ming share the meeting room laptop's tile. Youngjin has a separate tile.">
+      <header className="call-bar">
+        <strong>Team sync</strong>
+        <span><UsersIcon aria-hidden /> 2 participants</span>
+        <time>00:21</time>
+      </header>
+      <div className="call-tiles">
+        <div className="tile room-tile">
+          <TypingBubble className="at-1" who="Edric" text="Can we ship by Friday?" color={EDRIC} />
+          <TypingBubble className="at-2" who="Dowon" text="If the tests pass." color={DOWON} delayMs={1100} />
+          <TypingBubble className="at-3" who="Wei Ming" text="I'll own the API migration." color={WEI_MING} delayMs={2000} />
+          <Person color={EDRIC} className="seat-1" />
+          <Person color={DOWON} className="seat-2" />
+          <Person color={WEI_MING} className="seat-3" />
+          <span className="tile-table" />
+          <span className="tile-name"><MicrophoneIcon aria-hidden /> Meeting room laptop</span>
+        </div>
+        <div className="tile remote-tile">
+          <TypingBubble className="at-4" who="Youngjin" text="I'll send the notes." color={YOUNGJIN} delayMs={3200} />
+          <Person color={YOUNGJIN} className="seat-4" />
+          <span className="tile-name"><MicrophoneIcon aria-hidden /> Youngjin</span>
+        </div>
+      </div>
+      <div className="call-tools" aria-hidden>
+        <span><MicrophoneIcon size={20} /></span>
+        <span><VideoCameraIcon size={20} /></span>
+        <span className="leave"><PhoneDisconnectIcon size={20} weight="fill" /></span>
+      </div>
     </div>
   );
 }
@@ -75,6 +90,7 @@ function Laptops() {
         <rect x="430" y="62" width="108" height="82" rx="8" className="art-solid" />
         <path d="M412 152 H556" className="art-stroke" />
         <text x="484" y="108" textAnchor="middle" className="art-text">Own mic</text>
+        <rect data-thread="own-laptop" x="430" y="62" width="108" height="90" fill="none" />
         {ownBars.map((h, i) => (
           <rect key={i} x={434 + i * 8} y={235 - h / 2} width="4" height={h} rx="2" fill={YOUNGJIN} />
         ))}
@@ -127,9 +143,9 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
     <main className="pitch" ref={root}>
       <Thread root={root} />
 
-      <section className="scene">
+      <section className="scene scene-call">
         <p className="caption">Three in one room. One in another.</p>
-        <Room />
+        <VideoCall />
       </section>
       <section className="scene">
         <p className="caption">Three voices share one laptop. One has its own.</p>

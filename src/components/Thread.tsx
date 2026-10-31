@@ -33,12 +33,13 @@ function buildPaths(root: HTMLElement) {
     return { left: r.left - box.left, right: r.right - box.left, top: r.top - box.top, bottom: r.bottom - box.top };
   };
   const laptop = root.querySelector('[data-thread="laptop"]');
+  const ownLaptop = root.querySelector('[data-thread="own-laptop"]');
   const voices = [...root.querySelectorAll('[data-thread="voice"]')];
   const story = root.querySelector('[data-thread="split-scene"]');
   const hero = root.querySelector('[data-thread="hero"]');
   const end = root.querySelector('[data-thread="end"]');
   const sections = [...root.querySelectorAll('[data-thread="section"]')];
-  if (!laptop || voices.length !== SPEAKERS.length || !story || !hero || !end || !sections.length) return null;
+  if (!laptop || !ownLaptop || voices.length !== SPEAKERS.length || !story || !hero || !end || !sections.length) return null;
 
   const wide = box.width >= WIDE_ENOUGH;
   const heroBox = rel(hero);
@@ -77,13 +78,17 @@ function buildPaths(root: HTMLElement) {
   // Youngjin's line never mixes: it runs from their own laptop, just inside the grey line, to their track.
   const own = rel(voices[voices.length - 1]);
   const ownX = (own.left + own.right) / 2;
+  const ownMic = rel(ownLaptop);
+  const ownMicX = (ownMic.left + ownMic.right) / 2;
   const ownTurn = gapY + OWN_LINE_DROP;
   const ownRail = left + OWN_LINE_INSET;
   const ownLane = heroY(LANE_YS[0]);
   const ownLine = [
     `M${ownX} ${own.bottom - FIGURE_FOOT}`,
-    `L${ownX} ${ownTurn - CORNER}`,
-    `Q${ownX} ${ownTurn} ${ownX - CORNER} ${ownTurn}`,
+    `L${ownX} ${ownMic.top - BEND}`,
+    `C${ownX} ${ownMic.top - BEND / 3} ${ownMicX} ${ownMic.top - BEND} ${ownMicX} ${ownMic.top}`,
+    `L${ownMicX} ${ownTurn - CORNER}`,
+    `Q${ownMicX} ${ownTurn} ${ownMicX - CORNER} ${ownTurn}`,
     `L${ownRail + CORNER} ${ownTurn}`,
     `Q${ownRail} ${ownTurn} ${ownRail} ${ownTurn + CORNER}`,
     `L${ownRail} ${ownLane - CORNER}`,

@@ -300,9 +300,6 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .caption { font-family: var(--display); font-size: clamp(1.75rem, 3.2vw, 2.75rem); font-weight: 500; line-height: 1.08; letter-spacing: -.028em; text-wrap: balance; }
 .scene-art { position: relative; }
 .scene-art svg { display: block; width: 100%; height: auto; }
-.art-room { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
-.art-other-room { fill: var(--raise); fill-opacity: .28; stroke: var(--control-line); stroke-width: 1.5; }
-.art-table { fill: none; stroke: var(--control-line); stroke-width: 1.5; }
 .art-solid { fill: var(--surface); stroke: var(--ink); stroke-width: 2; }
 .art-stroke { stroke: var(--ink); stroke-width: 3; stroke-linecap: round; fill: none; }
 .art-text { font-family: var(--display); font-size: 15px; font-weight: 500; letter-spacing: -.012em; fill: var(--ink); }
@@ -314,12 +311,37 @@ h3 { font-family: var(--mono); font-size: .72rem; font-weight: 500; letter-spaci
 .bubble p > span { grid-area: 1 / 1; }
 .bubble-space { visibility: hidden; }
 .caret { display: inline-block; width: 1.5px; height: 1em; margin-left: 1px; background: var(--who); vertical-align: -2px; animation: pulse .9s infinite; }
-.room .bubble { width: 20%; top: 4%; }
-.room .bubble::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 11px; height: 11px; margin-left: -6px; background: var(--surface); border-right: 1.5px solid var(--who); border-bottom: 1.5px solid var(--who); transform: rotate(45deg); }
-.at-1 { left: 2%; }
-.at-2 { left: 24%; }
-.at-3 { left: 46%; }
-.at-4 { left: 76.5%; }
+.call .bubble::after { content: ""; position: absolute; bottom: -7px; left: 50%; width: 11px; height: 11px; margin-left: -6px; background: var(--surface); border-right: 1.5px solid var(--who); border-bottom: 1.5px solid var(--who); transform: rotate(45deg); }
+.call {
+  /* The call window stays dark in both themes, like the apps it stands for. */
+  --surface: #131318; --ink: #f4f2ec; --muted: #a0a0a8; --line: #2a2a32;
+  --speaker-1: #ff6647; --speaker-2: #5b9bff; --speaker-3: #bd96ff; --speaker-4: #35dba6;
+  position: relative; display: grid; gap: 10px; padding: 12px; background: #0d0d11; color: var(--ink); border-radius: 16px; box-shadow: 0 24px 60px -30px rgb(0 0 0 / 60%);
+}
+.call-bar { display: flex; align-items: center; gap: 14px; padding: 2px 6px; font-size: .85rem; }
+.call-bar strong { font-family: var(--display); font-size: 1rem; font-weight: 600; letter-spacing: -.012em; }
+.call-bar span { display: inline-flex; align-items: center; gap: 5px; padding: 2px 9px; background: #24242c; border-radius: 999px; }
+.call-bar time { margin-left: auto; font-size: .85rem; }
+.call-tiles { display: grid; grid-template-columns: 3fr 1fr; gap: 10px; }
+.tile { position: relative; height: 340px; overflow: hidden; border-radius: 10px; }
+.room-tile { background: #2b2d36; box-shadow: inset 0 0 0 2px #35dba6; }
+.remote-tile { background: #1c2b27; }
+.tile .bubble { top: 12px; }
+.call-person { position: absolute; top: 112px; transform: translateX(-50%); }
+.seat-1 { left: 18%; }
+.seat-2 { left: 50%; }
+.seat-3 { left: 82%; }
+.seat-4 { left: 50%; }
+.tile-table { position: absolute; left: 8%; right: 8%; top: 182px; height: 60px; background: #17181e; border-radius: 50% 50% 8px 8px / 100% 100% 8px 8px; }
+.tile-name { position: absolute; left: 10px; bottom: 10px; display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; background: rgb(0 0 0 / 70%); border-radius: 6px; font-family: var(--display); font-size: .82rem; font-weight: 500; white-space: nowrap; }
+.at-1 { left: 3%; width: 30%; }
+.at-2 { left: 35%; width: 30%; }
+.at-3 { left: 67%; width: 30%; }
+.at-4 { left: 7%; width: 86%; }
+.call-tools { display: flex; justify-content: center; gap: 8px; }
+.call-tools span { display: grid; place-items: center; width: 42px; height: 42px; background: #24242c; border-radius: 50%; }
+.call-tools .leave { background: #d92d20; color: #fff; }
+.scene-call { grid-template-columns: minmax(0, 4fr) minmax(0, 9fr); }
 .mock-card { position: relative; display: grid; gap: 11px; padding: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 12px; }
 .mock-card strong { display: block; font-family: var(--display); font-size: .85rem; font-weight: 600; letter-spacing: -.012em; }
 .mock-head { font-family: var(--mono); font-size: .68rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
@@ -369,7 +391,9 @@ tbody th { font-weight: 600; white-space: nowrap; }
   .topbar { padding: 12px 16px; }
   .page { padding: 20px 16px 48px; }
   .pitch > section, .pitch > footer { width: calc(100% - 56px); margin-left: 40px; margin-right: 16px; }
-  .scene { grid-template-columns: 1fr; gap: 24px; min-height: 0; }
+  .scene, .scene-call { grid-template-columns: 1fr; gap: 24px; min-height: 0; }
+  .call-person { width: 48px; height: 48px; top: 130px; }
+  .tile { height: 300px; }
   .stats, .stats.two, .memory-flow, .agent-points { grid-template-columns: 1fr; }
   .bubble { font-size: .7rem; padding: 5px 6px; }
   .review-grid, .journey { grid-template-columns: 1fr; gap: 24px; }
