@@ -160,6 +160,7 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
 
   return (
     <main className="page review">
+      {meeting.isSample && <SampleNotice />}
       <div className="review-head">
         <div>
           <h1>{meeting.title}</h1>
@@ -179,9 +180,6 @@ export function Review({ meeting, onChange }: { meeting: Meeting; onChange: (m: 
       </div>
 
       {error && <p className="error" role="alert">{error}</p>}
-      {meeting.isSample && (
-        <SampleNotice />
-      )}
 
       <section className="panel split">
         <div className="split-head">
