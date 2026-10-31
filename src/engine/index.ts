@@ -14,7 +14,7 @@ export function useEngineHealth() {
     let active = true;
     const check = () => request<EngineHealth>("/api/status")
       .then((next) => { if (active) setHealth(next); })
-      .catch((error: Error) => { if (active) setHealth({ ready: false, error: error.message }); });
+      .catch(() => { if (active) setHealth({ ready: false, error: "The local engine isn't running on this computer." }); });
     void check();
     const timer = setInterval(check, 5000);
     return () => { active = false; clearInterval(timer); };

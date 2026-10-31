@@ -65,8 +65,8 @@ export function App() {
 
   useEffect(() => {
     window.scrollTo(0, 0);
-    if (screen === "meetings") void request<Room[]>("/api/rooms").then(setRooms).catch((e: Error) => setError(e.message));
-  }, [screen]);
+    if (screen === "meetings" && engine === "found") void request<Room[]>("/api/rooms").then(setRooms).catch((e: Error) => setError(e.message));
+  }, [screen, engine]);
 
   useEffect(() => {
     history.replaceState(null, "", paths[screen]);
