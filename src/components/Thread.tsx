@@ -3,7 +3,12 @@ import { HERO_LANE_START, HERO_MID, HERO_VIEW_WIDTH, LANE_YS } from "./HeroSplit
 
 const GUTTER = 56;
 const CORNER = 16;
-const BEND = 90;
+/** Middle radius of a four-line turn. It stays larger than the outer offset so no arc collapses. */
+const RIBBON = 34;
+const END_RADIUS = 34;
+const GREY_TURN = 30;
+const OWN_TURN = 18;
+const BEND = 120;
 /** The person icon has empty space under its shoulders, so each line starts inside the box. */
 const FIGURE_FOOT_SHARE = 0.17;
 const INPUT_SPREAD = 14;
@@ -13,8 +18,8 @@ const SAMPLE_EVERY = 16;
 /** The line is drawn up to this share of the viewport height. */
 const DRAW_HEAD = 0.72;
 const OFFSETS = [18, 6, -6, -18];
-const OWN_LINE_INSET = 14;
-const OWN_LINE_DROP = 24;
+const OWN_LINE_INSET = 12;
+const OWN_LINE_DROP = 12;
 const SPEAKERS = ["var(--speaker-1)", "var(--speaker-2)", "var(--speaker-3)", "var(--speaker-4)"];
 const YOUNGJIN = SPEAKERS[3];
 const GREY = "var(--unknown)";
@@ -59,7 +64,7 @@ function buildPaths(root: HTMLElement) {
     const x = (v.left + v.right) / 2;
     const landing = startX + (i - (roomVoices.length - 1) / 2) * INPUT_SPREAD;
     const bend = mic.top - BEND;
-    return `M${x} ${foot(v)} L${x} ${bend} C${x} ${mic.top - BEND / 3} ${landing} ${bend} ${landing} ${mic.top}`;
+    return `M${x} ${foot(v)} L${x} ${bend} C${x} ${bend + BEND / 2} ${landing} ${bend + BEND / 2} ${landing} ${mic.top}`;
   });
 
   // One grey line: out of the laptop, down through the story, into the mixed signal.
@@ -70,8 +75,8 @@ function buildPaths(root: HTMLElement) {
     `M${startX} ${mic.bottom}`,
     `L${startX} ${gapY - CORNER}`,
     `Q${startX} ${gapY} ${startX - CORNER} ${gapY}`,
-    `L${left + CORNER} ${gapY}`,
-    `Q${left} ${gapY} ${left} ${gapY + CORNER}`,
+    `L${left + GREY_TURN} ${gapY}`,
+    `A${GREY_TURN} ${GREY_TURN} 0 0 0 ${left} ${gapY + GREY_TURN}`,
     `L${left} ${heroMid - CORNER}`,
     `Q${left} ${heroMid} ${left + CORNER} ${heroMid}`,
     `L${heroBox.left} ${heroMid}`,
@@ -88,11 +93,11 @@ function buildPaths(root: HTMLElement) {
   const ownLine = [
     `M${ownX} ${foot(own)}`,
     `L${ownX} ${ownMic.top - BEND}`,
-    `C${ownX} ${ownMic.top - BEND / 3} ${ownMicX} ${ownMic.top - BEND} ${ownMicX} ${ownMic.top}`,
+    `C${ownX} ${ownMic.top - BEND / 2} ${ownMicX} ${ownMic.top - BEND / 2} ${ownMicX} ${ownMic.top}`,
     `L${ownMicX} ${ownTurn - CORNER}`,
     `Q${ownMicX} ${ownTurn} ${ownMicX - CORNER} ${ownTurn}`,
-    `L${ownRail + CORNER} ${ownTurn}`,
-    `Q${ownRail} ${ownTurn} ${ownRail} ${ownTurn + CORNER}`,
+    `L${ownRail + OWN_TURN} ${ownTurn}`,
+    `A${OWN_TURN} ${OWN_TURN} 0 0 0 ${ownRail} ${ownTurn + OWN_TURN}`,
     `L${ownRail} ${ownLane - CORNER}`,
     `Q${ownRail} ${ownLane} ${ownRail + CORNER} ${ownLane}`,
     `L${heroBox.left + HERO_LANE_START * scale} ${ownLane}`,
@@ -110,24 +115,33 @@ function buildPaths(root: HTMLElement) {
       const r = rel(section);
       const side = wide && index % 2 === 1 ? left + offset : x0;
       if (side !== x) {
-        // Keep the four lines a visible ribbon while crossing: each turns at its own height, so none overlap.
-        const crossing = (y + r.top) / 2 + (side < x ? offset : -offset);
-        const step = side < x ? -CORNER : CORNER;
+        // Each crossing is a ribbon of concentric arcs: every line turns around the same centre, so they stay evenly spaced.
+        const goingLeft = side < x;
+        const crossing = (y + r.top) / 2 + (goingLeft ? offset : -offset);
+        const leave = goingLeft ? RIBBON + offset : RIBBON - offset;
+        const arrive = goingLeft ? RIBBON - offset : RIBBON + offset;
+        const direction = goingLeft ? -1 : 1;
         d.push(
-          `L${x} ${crossing - CORNER}`,
-          `Q${x} ${crossing} ${x + step} ${crossing}`,
-          `L${side - step} ${crossing}`,
-          `Q${side} ${crossing} ${side} ${crossing + CORNER}`,
+          `L${x} ${crossing - leave}`,
+          `A${leave} ${leave} 0 0 ${goingLeft ? 1 : 0} ${x + direction * leave} ${crossing}`,
+          `L${side - direction * arrive} ${crossing}`,
+          `A${arrive} ${arrive} 0 0 ${goingLeft ? 0 : 1} ${side} ${crossing + arrive}`,
         );
         x = side;
       }
-      y = index === sections.length - 1 ? e.top + (e.bottom - e.top) / 2 + offset / 3 - 24 : r.bottom;
-      d.push(`L${x} ${y}`);
+      y = r.bottom;
     });
-    const yEnd = y + 24;
-    const edge = x < e.left ? e.left : e.right;
-    const toward = edge > x ? 24 : -24;
-    d.push(`Q${x} ${yEnd} ${x + toward} ${yEnd}`, `L${edge} ${yEnd}`);
+    // The lines finish by curving into the repo button, again around one shared centre.
+    const buttonMid = (e.top + e.bottom) / 2;
+    const fromLeft = x < e.left;
+    const yEnd = buttonMid + (fromLeft ? -offset / 2 : offset / 2);
+    const finish = END_RADIUS + (fromLeft ? -offset : offset);
+    const edge = fromLeft ? e.left : e.right;
+    d.push(
+      `L${x} ${yEnd - finish}`,
+      `A${finish} ${finish} 0 0 ${fromLeft ? 0 : 1} ${x + (fromLeft ? finish : -finish)} ${yEnd}`,
+      `L${edge} ${yEnd}`,
+    );
     return d.join(" ");
   });
 

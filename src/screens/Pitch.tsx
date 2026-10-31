@@ -220,9 +220,9 @@ export function Pitch(props: { engine: EngineStatus; onStart: () => void; onSamp
         <p>Speaker identification is usually two layers stacked: <b>diarization</b> (when the voice changes) and <b>enrollment</b> (matching a voice to a known print).</p>
         <p>Timbre transcribes meetings and uses voice matching to identify checked-in participants. When the evidence is unclear, it labels the voice as unknown instead of forcing a name.</p>
         <ol className="how-steps">
-          <li><span>01</span><div><h3>Transcribe the conversation</h3><p>Convert meeting audio into text with word-level timestamps.</p></div></li>
-          <li><span>02</span><div><h3>Compare voices</h3><p>Match speech against saved voice profiles, checking both similarity and competing matches.</p></div></li>
-          <li><span>03</span><div><h3>Assign a speaker</h3><p>Show a participant's name when the evidence meets the matching criteria, or use an unknown-speaker label.</p></div></li>
+          <li><span>1</span><div><h3>Transcribe the conversation</h3><p>Convert meeting audio into text with word-level timestamps.</p></div></li>
+          <li><span>2</span><div><h3>Compare voices</h3><p>Match speech against saved voice profiles, checking both similarity and competing matches.</p></div></li>
+          <li><span>3</span><div><h3>Assign a speaker</h3><p>Show a participant's name when the evidence meets the matching criteria, or use an unknown-speaker label.</p></div></li>
         </ol>
       </section>
 

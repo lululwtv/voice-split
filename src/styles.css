@@ -60,7 +60,7 @@ h3 { font-size: .72rem; font-weight: 500; letter-spacing: .1em; text-transform: 
 
 /* Top bar */
 .topbar { display: flex; align-items: center; gap: 28px; padding: 18px 32px; }
-.brand { border: 0; background: none; padding: 0; font-family: var(--display); font-size: 1.4rem; font-weight: 600; letter-spacing: -.04em; }
+.brand { border: 0; background: none; padding: 0; font-family: var(--display); font-size: 2rem; font-weight: 600; letter-spacing: -.04em; }
 .topbar nav { display: flex; align-items: center; gap: 18px; flex: 1; justify-content: flex-end; }
 .topbar nav button { border: 0; background: none; padding: 2px 0; color: var(--muted); font-size: .75rem; letter-spacing: .08em; text-transform: uppercase; border-bottom: 1px solid transparent; }
 .topbar nav button:hover { color: var(--ink); }
@@ -393,8 +393,8 @@ tbody th { font-weight: 600; white-space: nowrap; }
 .stats strong { display: block; font-family: var(--display); font-size: clamp(3rem, 7vw, 5.5rem); font-weight: 600; line-height: 1; letter-spacing: -.04em; }
 .stats span { display: block; margin-top: 8px; font-size: .875rem; color: var(--muted); }
 .how-steps { display: grid; gap: 22px; margin-top: 8px; }
-.how-steps li { display: grid; grid-template-columns: 52px 1fr; }
-.how-steps span { font-size: .8rem; color: var(--muted); padding-top: 4px; }
+.how-steps li { display: grid; grid-template-columns: 44px 1fr; }
+.how-steps span { font-family: var(--display); font-size: 1.75rem; font-weight: 600; line-height: 1; letter-spacing: -.02em; color: var(--muted); padding-top: 1px; }
 .how-steps h3 { font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; color: var(--ink); text-transform: none; }
 .memory-flow { display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; margin-top: 8px; }
 .memory-flow h3 { margin-bottom: 6px; font-family: var(--display); font-size: 1.35rem; font-weight: 600; letter-spacing: -.015em; color: var(--ink); text-transform: none; }
